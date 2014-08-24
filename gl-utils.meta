@@ -1,0 +1,8 @@
+;; gl-utils.meta -*- scheme -*-
+
+((synopsis "High(er) level tools for OpenGL")
+ (author "Alex Charlton")
+ (category graphics)
+ (license "BSD")
+ (depends z3 matchable miscmacros srfi-42 make)
+ (foreign-depends "OpenGL"))
