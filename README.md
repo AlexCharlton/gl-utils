@@ -95,6 +95,10 @@ Returns the pointer to a srfi-4 vector or blob.
 
 Returns the size, in bytes, of a srfi-4 vector or blob.
 
+    [procedure] (type->bytes TYPE)
+
+Returns the size of `TYPE` (as accepted by `type->gl-type`) in number of bytes.
+
     [procedure] (type->gl-type TYPE)
 
 Converts the keyword `TYPE` into a OpenGL type enum value. Accepted types (grouped by synonyms) are: 
@@ -107,11 +111,6 @@ Converts the keyword `TYPE` into a OpenGL type enum value. Accepted types (group
 - `uint:` `uint32:` `unsigned-int:` `unsigned-int32:` `unsigned-integer:` `unsigned-integer32:`
 - `float:` `float32:`
 - `double:` `float64:`
-
-
-    [procedure] (type->bytes TYPE)
-
-Returns the size of `TYPE` (as accepted by `type->gl-type`) in number of bytes.
 
 ### gl-utils-srfi4
 gl-utils-srfi4 reexports a version of [srfi-4](http://api.call-cc.org/doc/srfi-4) that gives preference to vectors being created in non-garbage collected memory. This is useful for use with OpenGL, since it is often desirable to pass vectors to OpenGL that will remain in one place. All srfi-4 functions not mentioned below are reexported without changes.
