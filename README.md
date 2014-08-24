@@ -26,7 +26,7 @@ Performs `get-error` (`glGetError`) and prints the error type when an error is r
 
     [procedure] (make-shader TYPE SOURCE)
 
-Creates and compiles a shader object given the shader's type (e.g. `+vertex-shader+`, `+geometry-shader+`, `+fragment-shader`), and a string containing the GLSL source. Returns an integer representing the ID of the shader.
+Creates and compiles a shader object given the shader's type (e.g. `+vertex-shader+`, `+geometry-shader+`, `+fragment-shader+`), and a string containing the GLSL source. Returns an integer representing the ID of the shader.
 
     [procedure] (make-program SHADER-LIST [PROGRAM-ID])
 
@@ -67,7 +67,7 @@ Analogous to their pluralized counterparts, but only accepts and deletes one (in
     [macro] (with-transform-feedback TRANSFORM-FEEDBACK BODY ...)
     [macro] (with-vertex-array VERTEX-ARRAY BODY ...)
 
-Equivalent to e.g. `(bind-texture TYPE TEXTURE) BODY ... (bind-texture TYPE 0)`.
+Equivalent to binding the object, executing the body, then binding 0. E.g. `(bind-texture TYPE TEXTURE) BODY ... (bind-texture TYPE 0)`.
 
     [procedure] (set-texture-properties ID type: TYPE mag: MAG min: MIN wrap: WRAP wrap-s: WRAP-S wrap-t: WRAP-T wrap-r: WRAP-R)
 
@@ -83,7 +83,7 @@ Create a framebuffer with a texture and depth renderbuffer attached. The texture
 
 `ATTRIBUTES` is the list of data necessary for the vertex attributes, in the form of `((LOCATION TYPE N [normalize?: NORMALIZE?]) ...)`. `LOCATION` is the attribute location which may be given as `#f` if the attribute is not used. `TYPE` is the type of data corresponding to the given attribute, given as a keyword. For possible types, see `type->gl-type`. `N` is the number of elements for the given attribute. The keyword `normalize?:` accepts a boolean argument which instructs OpenGL to normalize the attribute or not. Defaults to `#f`.
 
-The optional `USAGE` must be one of `+stream-data+`, `+stream-read+`, `stream-copy`, `+static-data+`, `+static-read+`, `static-copy`, `+dynamic-data+`, `+dynamic-read+`, `dynamic-copy`. Defaults to `+static-draw+`.
+The optional `USAGE` must be one of `+stream-data+`, `+stream-read+`, `+stream-copy+`, `+static-data+`, `+static-read+`, `+static-copy+`, `+dynamic-data+`, `+dynamic-read+`, `+dynamic-copy+`. Defaults to `+static-draw+`.
 
 `make-vao` returns the ID of a vertex array object. This object should be deleted with `delete-vertex-array` when no longer used. Intermediate vertex buffers are generated and deleted, thus only the returned vertex array ID needs to be managed.
 
@@ -108,21 +108,22 @@ Converts the keyword `TYPE` into a OpenGL type enum value. Accepted types (group
 - `float:` `float32:`
 - `double:` `float64:`
 
+
     [procedure] (type->bytes TYPE)
 
 Returns the size of `TYPE` (as accepted by `type->gl-type`) in number of bytes.
 
 ### gl-utils-srfi4
-gl-utils reexports a version of [srfi-4](http://api.call-cc.org/doc/srfi-4) that gives preference to vectors being created in non-garbage collected memory. This is useful for use with OpenGL, since it is often desirable to pass vectors to OpenGL that will remain in one place. All srfi-4 functions not mentioned below are reexported without changes.
+gl-utils-srfi4 reexports a version of [srfi-4](http://api.call-cc.org/doc/srfi-4) that gives preference to vectors being created in non-garbage collected memory. This is useful for use with OpenGL, since it is often desirable to pass vectors to OpenGL that will remain in one place. All srfi-4 functions not mentioned below are reexported without changes.
 
 The `NNNvector` and `list->NNNvector` constructors have been modified so that they return vectors in non-garbage collected memory.
 
-The `make-NNNvector` constructors act as their srfi-4 counterparts, except they now return vectors in non-garbage collected memory by default.
+The `make-NNNvector` constructors act as their srfi-4 counterparts, except they return vectors in non-garbage collected memory by default.
 
 ### gl-utils-ply
     [procedure] (load-ply FILE BUFFER-SPEC)
 
-Loads a [PLY](http://paulbourke.net/dataformats/ply/) file. `FILE` is a path that may be pointing to a gziped PLY file. `BUFFER-SPEC` is a list in the form `((NAME VARS) ...)` where `NAME` is the name of an element in the PLY file and `VARS` is either a list of property names or, in the case of a property list, a single name. Two values are returned: a list of u8vectors which correspond to the buffers named in `BUFFER-SPEC` and a list of the elements that are in the PLY file in the form of:
+Loads a [PLY](http://paulbourke.net/dataformats/ply/) file. `FILE` is a path that may be pointing either to a gziped PLY file or a regular PLY file. `BUFFER-SPEC` is a list in the form `((NAME VARS) ...)` where `NAME` is the name of an element in the PLY file and `VARS` is either a list of property names or, in the case of a property list, a single name. Two values are returned: a list of u8vectors which correspond to the buffers named in `BUFFER-SPEC` and a list of the elements that are in the PLY file in the form of:
 
     (element-name n-elements (property-name property-type))
 
@@ -130,7 +131,7 @@ Or, when an element is a property list:
 
     (element-name n-elements (property-name (list: list-length-type element-type)))
 
-The buffers returned are packed with the contents of the properties named in the `BUFFER-SPEC`. Thus, for a PLY file that has element `vertex` with properties `float x`, `float y`, `float z`, `float confidence`, `uchar r`, `uchar g`, and `uchar b`, as well as a nelement `face` with a property list `uchar ushort vertex_index`, the following `BUFFER-SPEC` could be used:
+The buffers returned are packed with the contents of the properties named in the `BUFFER-SPEC`. Thus, for a PLY file that has element `vertex` with properties `float x`, `float y`, `float z`, `float confidence`, `uchar r`, `uchar g`, and `uchar b`, as well as an element `face` with a property list `uchar ushort vertex_index`, the following `BUFFER-SPEC` could be used:
 
     (load-ply "example.ply.gz" '((vertex: (x y z r g b)) (face: vertex_index)))
 
