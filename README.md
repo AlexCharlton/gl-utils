@@ -157,6 +157,7 @@ Again, for a PLY file that has element `vertex` with properties `float x`, `floa
 
 ## Examples
 This example depends on the [opengl-glew](http://wiki.call-cc.org/eggref/4/opengl-glew) egg, the [glfw3](http://wiki.call-cc.org/eggref/4/glfw3) egg for window and context creation, and the [gl-math](http://wiki.call-cc.org/eggref/4/gl-math) egg for matrix math.
+
 ```Scheme
 (import chicken scheme)
 (use (prefix glfw3 glfw:) (prefix opengl-glew gl:) gl-math (prefix gl-utils gl:)
@@ -247,7 +248,7 @@ END
 ```
 
 ## Version history
-### Version 0.1.0
+### Version 0.1.1
 * Initial release
 
 ## Source repository
