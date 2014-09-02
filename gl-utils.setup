@@ -44,4 +44,4 @@
     "gl-utils-core.so" "gl-utils-core.import.so"
     "gl-utils-srfi-4.so" "gl-utils-srfi-4.import.so"
     "gl-utils-ply.so" "gl-utils-ply.import.so")
- '((version "0.1.1")))
+ '((version "0.1.2")))

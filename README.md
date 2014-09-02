@@ -248,7 +248,13 @@ END
 ```
 
 ## Version history
-### Version 0.1.1
+### Version 0.1.2
+
+2 September 2014
+
+* Update example for gl-math 0.5
+
+**Version 0.1.1**
 * Initial release
 
 ## Source repository
