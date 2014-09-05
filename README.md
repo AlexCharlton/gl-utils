@@ -112,12 +112,92 @@ Converts the keyword `TYPE` into a OpenGL type enum value. Accepted types (group
 - `float:` `float32:`
 - `double:` `float64:`
 
+
 ### gl-utils-srfi4
 gl-utils-srfi4 reexports a version of [srfi-4](http://api.call-cc.org/doc/srfi-4) that gives preference to vectors being created in non-garbage collected memory. This is useful for use with OpenGL, since it is often desirable to pass vectors to OpenGL that will remain in one place. All srfi-4 functions not mentioned below are reexported without changes.
 
-The `NNNvector` and `list->NNNvector` constructors have been modified so that they return vectors in non-garbage collected memory.
+The `NNNvector` and `list->NNNvector` constructors have been modified so that they return vectors in non-garbage collected memory. They will still be freed when no longer used.
 
-The `make-NNNvector` constructors act as their srfi-4 counterparts, except they return vectors in non-garbage collected memory by default.
+The `make-NNNvector` constructors act as their srfi-4 counterparts, except they return vectors in non-garbage collected memory by default. They will still be freed when non longer used.
+
+
+### gl-utils-bytevector
+r7rs style bytevectors with unsafe accessors. As in gl-utils-srfi4, bytevectors are created in non-garbage-collected memory. They will still be freed when no longer used.
+
+    [procedure] (bytevector BYTE ...)
+
+Returns a newly allocated bytevector containing its arguments.
+
+    [procedure] (make-bytevector K [BYTE] [NONGC] [FINALIZE])
+
+Return a newly-allocated bytevector of length `K`. If the optional fill `BYTE` is specified, it specifies the initial value for each slot in the bytevector.
+
+The optional arguments `NONGC` and `FINALIZE` define whether the vector should be allocated in a memory area not subject to garbage collection and whether the associated storage should be automatically freed (using finalization) when there are no references from Scheme variables and data. NONGC defaults to #t (the vector will be located in non-garbage-collected memory) and FINALIZE defaults to #t. Note that the FINALIZE argument is only used when NONGC is true.
+
+    [procedure] (bytevector-length BYTEVECTOR)
+
+Return the length in bytes of `BYTEVECTOR`.
+
+    [procedure] (bytevector? BYTEVECTOR)
+
+Returns true if `BYTEVECTOR` is a bytevector, false otherwise.
+
+    [procedure] (bytevector-u8-set! BYTEVECTOR K UNSIGNED-BYTE)
+
+    [procedure] (bytevector-s8-set! BYTEVECTOR K BYTE)
+
+    [procedure] (bytevector-u16-set! BYTEVECTOR K UNSIGNED-SHORT)
+
+    [procedure] (bytevector-s16-set! BYTEVECTOR K SHORT)
+
+    [procedure] (bytevector-u32-set! BYTEVECTOR K UNSIGNED-INT)
+
+    [procedure] (bytevector-s32-set! BYTEVECTOR K INT)
+
+    [procedure] (bytevector-u64-set! BYTEVECTOR K UNSIGNED-LONG)
+
+    [procedure] (bytevector-s64-set! BYTEVECTOR K LONG)
+
+    [procedure] (bytevector-f32-set! BYTEVECTOR K FLOAT)
+
+    [procedure] (bytevector-f64-set! BYTEVECTOR K DOUBLE)
+
+Sets the byte `K` of the given bytevector to be the value of the given fixnum or flonum. These functions are unsafe, so be sure `K` is a valid location in the bytevector.
+
+    [procedure] (bytevector-u8-ref BYTEVECTOR K)
+
+    [procedure] (bytevector-s8-ref BYTEVECTOR K)
+
+    [procedure] (bytevector-u16-ref BYTEVECTOR K)
+
+    [procedure] (bytevector-s16-ref BYTEVECTOR K)
+
+    [procedure] (bytevector-u32-ref BYTEVECTOR K)
+
+    [procedure] (bytevector-s32-ref BYTEVECTOR K)
+
+    [procedure] (bytevector-u64-ref BYTEVECTOR K)
+
+    [procedure] (bytevector-s64-ref BYTEVECTOR K)
+
+    [procedure] (bytevector-f32-ref BYTEVECTOR K)
+
+    [procedure] (bytevector-f64-ref BYTEVECTOR K)
+
+Returns the fixnum or flonum of the given size located at byte `K` of the given bytevector. These functions are unsafe, so be sure `K` is a valid location in the bytevector.
+
+    [procedure] (bytevector-append BYTEVECTOR . BYTEVECTORSS)
+
+Returns a newly allocated bytevector whose elements are the concatenation of the elements in the given bytevectors. If only one element is given, it is assumed that it is a list of bytevectors.
+
+    [procedure] (bytevector-copy BYTEVECTOR [START] [END])
+
+Returns a newly allocated copy of the elements of the given bytevector between `START` and `END`.
+
+    [procedure] (bytevector-copy! TO AT FROM [START] [END])
+
+Copies the elements of bytevector `FROM` between `START` and `END` to bytevector `TO`, starting at `AT`. It is an error if `AT` is less than zero or greater than the length of `TO`. It is also an error if `(- (bytevector-length TO) AT)` is less than `(- END START)`.
+
 
 ### gl-utils-ply
     [procedure] (load-ply FILE BUFFER-SPEC)
