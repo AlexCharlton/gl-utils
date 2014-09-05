@@ -135,20 +135,20 @@
           (begin
             (let* ((v (car vectors))
                    (len (bytevector-length v)))
-              (do ((j 0 (add1 j)))
-                  ((= j len))
-                (bytevector-u8-set! result (+ i j)
-                                    (bytevector-u8-ref v j)))
+              ((foreign-lambda* void ((u8vector to) (u8vector from) (size_t len)
+                                      (size_t off))
+                 "memcpy(&to[off], from, len);")
+               result v len i)
               (loop (cdr vectors) (+ i len))))))))
 
 (define (bytevector-copy bv #!optional (start 0 ) (end (bytevector-length bv)))
   (when (or (< start 0) (>= start end) (> end (bytevector-length bv)))
     (error 'bytevector-copy "Bad range" (list start end)))
-  (let* ((end (- end start))
-         (result (make-bytevector end)))
-    (do ((i 0 (add1 i)))
-        ((= i end))
-      (bytevector-u8-set! result i (bytevector-u8-ref bv (+ start i))))
+  (let* ((len (- end start))
+         (result (make-bytevector len)))
+    ((foreign-lambda* void ((u8vector to) (u8vector from) (size_t len) (size_t off))
+       "memcpy(to, &from[off], len);")
+     result bv len start)
     result))
 
 (define (bytevector-copy! to at from
@@ -161,10 +161,9 @@
            (- end start))
     (error 'bytevector-copy
            "Bytevector being copied into is not long enough to hold range" to))
-  (let ((end (- end start)))
-    (do ((i 0 (add1 i)))
-        ((= i end))
-      (bytevector-u8-set! to (+ i at)
-                          (bytevector-u8-ref from (+ i start))))))
+  ((foreign-lambda* void ((u8vector to) (u8vector from) (size_t len)
+                          (size_t to_off) (size_t from_off))
+     "memcpy(&to[to_off], &from[from_off], len);")
+   to from (- end start) at start))
 
 ) ; end gl-utils-bytevector
