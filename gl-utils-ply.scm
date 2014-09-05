@@ -1,112 +1,9 @@
 (module gl-utils-ply (load-ply
                       load-ply-vao)
 
-(import chicken scheme foreign)
-(use (prefix opengl-glew gl:) gl-utils-core gl-utils-srfi-4 z3 matchable srfi-42
-     miscmacros files srfi-1 srfi-13 extras data-structures ports)
-
-;;;; Blob utils
-;; Setting
-(define blob-set-u8!
-  (foreign-lambda* void
-         ((nonnull-scheme-pointer bv) (unsigned-integer32 x) (int off))
-    "((uint8_t *)bv)[off] = (uint8_t)(x & 0xff);"))
-
-(define blob-set-s8!
-  (foreign-lambda* void
-         ((nonnull-scheme-pointer bv) (integer32 x) (int off))
-    "((char *)bv)[off] = (char)(x & 0xff);"))
-
-(define blob-set-u16!
-  (foreign-lambda* void
-         ((nonnull-scheme-pointer bv) (unsigned-integer32 x) (int off))
-    "*(uint16_t *)(&((char *)bv)[off]) = (uint16_t)(x & 0xffff);"))
-
-(define blob-set-s16!
-  (foreign-lambda* void
-        ((nonnull-scheme-pointer bv) (integer32 x) (int off))
-    "*(int16_t *)(&((char *)bv)[off]) = (int16_t)(x & 0xffff);"))
-
-(define blob-set-u32!
-  (foreign-lambda* void
-         ((nonnull-scheme-pointer bv) (unsigned-integer32 x) (int off))
-    "*(uint32_t *)(&((char *)bv)[off]) = x;"))
-
-(define blob-set-s32!
-  (foreign-lambda* void
-        ((nonnull-scheme-pointer bv) (integer32 x) (int off))
-    "*(int32_t *)(&((char *)bv)[off]) = x;"))
-
-(define blob-set-s64!
-  (foreign-lambda* void
-         ((nonnull-scheme-pointer bv) (unsigned-integer64 x) (int off))
-    "*(uint64_t *)(&((char *)bv)[off]) = x;"))
-
-(define blob-set-s64!
-  (foreign-lambda* void
-        ((nonnull-scheme-pointer bv) (integer64 x) (int off))
-    "*(int64_t *)(&((char *)bv)[off]) = x;"))
-
-(define blob-set-f32!
-  (foreign-lambda* void
-        ((nonnull-scheme-pointer bv) (float x) (int off))
-    "*(float *)(&((char *)bv)[off]) = x;"))
-
-(define blob-set-f64!
-  (foreign-lambda* void
-         ((nonnull-scheme-pointer bv) (double x) (int off))
-    "*(double *)(&((char *)bv)[off]) = x;"))
-
-;; Referencing
-(define blob-ref-u8
-  (foreign-lambda* unsigned-byte
-         ((nonnull-scheme-pointer bv) (int off))
-    "C_return(((uint8_t *)bv)[off]);"))
-
-(define blob-ref-s8
-  (foreign-lambda* byte
-         ((nonnull-scheme-pointer bv) (int off))
-    "C_return(((char *)bv)[off]);"))
-
-(define blob-ref-u16
-  (foreign-lambda* unsigned-short
-         ((nonnull-scheme-pointer bv) (int off))
-    "C_return(*(uint16_t *)(&(((char *)bv)[off])));"))
-
-(define blob-ref-s16
-  (foreign-lambda* short
-         ((nonnull-scheme-pointer bv) (int off))
-    "C_return(*(int16_t *)(&(((char *)bv)[off])));"))
-
-(define blob-ref-u32
-  (foreign-lambda* unsigned-int
-         ((nonnull-scheme-pointer bv) (int off))
-    "C_return(*(uint32_t *)(&(((char *)bv)[off])));"))
-
-(define blob-ref-s32
-  (foreign-lambda* int
-         ((nonnull-scheme-pointer bv) (int off))
-    "C_return(*(int32_t *)(&(((char *)bv)[off])));"))
-
-(define blob-ref-u64
-  (foreign-lambda* unsigned-integer64
-         ((nonnull-scheme-pointer bv) (int off))
-    "C_return(*(uint64_t *)(&(((char *)bv)[off])));"))
-
-(define blob-ref-s64
-  (foreign-lambda* integer64
-         ((nonnull-scheme-pointer bv) (int off))
-    "C_return(*(int64_t *)(&(((char *)bv)[off])));"))
-
-(define blob-ref-f32
-  (foreign-lambda* float
-         ((nonnull-scheme-pointer bv) (int off))
-    "C_return(*(float *)(&(((char *)bv)[off])));"))
-
-(define blob-ref-f64
-  (foreign-lambda* double
-         ((nonnull-scheme-pointer bv) (int off))
-    "C_return(*(double *)(&(((char *)bv)[off])));"))
+(import chicken scheme)
+(use (prefix opengl-glew gl:) gl-utils-core gl-utils-bytevector
+     z3 matchable srfi-42 miscmacros files srfi-1 srfi-13 extras data-structures ports)
 
 ;;; Ply
 (define data-format (make-parameter #f))
@@ -121,16 +18,16 @@
 
 (define (type->setter type)
   (case type
-    ((char: int8: byte:) blob-set-u8!)
-    ((uchar: uint8: unsigned-byte:) blob-set-s8!)
-    ((short: int16:) blob-set-s16!)
-    ((ushort: uint16: unsigned-short:) blob-set-u16!)
-    ((int: int32: integer: integer32:) blob-set-s32!)
+    ((char: int8: byte:) bytevector-u8-set!)
+    ((uchar: uint8: unsigned-byte:) bytevector-s8-set!)
+    ((short: int16:) bytevector-s16-set!)
+    ((ushort: uint16: unsigned-short:) bytevector-u16-set!)
+    ((int: int32: integer: integer32:) bytevector-s32-set!)
     ((uint: uint32: unsigned-int: unsigned-int32:
 	    unsigned-integer: unsigned-integer32:)
-     blob-set-u32!)
-    ((float: float32:) blob-set-f32!)
-    ((double: float64:) blob-set-f64!)))
+     bytevector-u32-set!)
+    ((float: float32:) bytevector-f32-set!)
+    ((double: float64:) bytevector-f64-set!)))
 
 (define (bytes-per-element els)
   (foldl (lambda (count el)
@@ -166,14 +63,13 @@
                                         identity)
                                     (cdr (assoc el var-bytes))))))
                 (stride (length mapping))
-                (buffer (make-u8vector (* n stride)))
-                (blob (u8vector->blob/shared buffer)))
+                (buffer (make-bytevector (* n stride))))
            (dotimes (vertex n)
              (let ((bytes (list-ec (: _ (bytes-per-element vars))
                                    (read-byte))))
                (for-each (lambda (m i)
-                           (blob-set-u8! blob (list-ref bytes m)
-                                         (+ (* vertex stride) i)))
+                           (bytevector-u8-set! buffer (+ (* vertex stride) i)
+                                               (list-ref bytes m)))
                          mapping
                          (iota stride))))
            buffer)
@@ -205,13 +101,13 @@
                 (setters (map (lambda (el) (type->setter (second el)))
                               elements))
                 (stride (fold + 0 (map third elements)))
-                (buffer (make-u8vector (* n stride)))
-                (blob (u8vector->blob/shared buffer)))
+                (buffer (make-bytevector (* n stride))))
            (dotimes (vertex n)
              (let ((values (list-ec (: _ (length vars)) (read))))
                (for-each (lambda (mapping offset setter)
-                           (setter blob (list-ref values mapping)
-                                   (+ (* vertex stride) offset)))
+                           (setter buffer 
+                                   (+ (* vertex stride) offset)
+                                   (list-ref values mapping)))
                          mapping
                          offsets
                          setters)))
@@ -226,8 +122,7 @@
     (when (> (type->bytes list-type) 1)
       (error 'load-ply "Face list type must be one byte" list-type))
     (if* (assoc name spec)
-         (let* ((blob #f)
-                (buffer #f)
+         (let* ((buffer #f)
                 (n-bytes (type->bytes type))
                 (mapping ((if (endian-swap?)
                               reverse
@@ -238,8 +133,7 @@
                (if (= (n-face-vertices) 0)
                    (begin
                      (n-face-vertices n-verts)
-                     (set! buffer (make-u8vector (* n n-verts n-bytes)))
-                     (set! blob (u8vector->blob/shared buffer)))
+                     (set! buffer (make-bytevector (* n n-verts n-bytes))))
                    (when (not (= (n-face-vertices) n-verts))
                      (error 'load-ply "Number of elements must be constant in face list")))
                (dotimes (vertex n-verts)
@@ -247,10 +141,11 @@
                                        (read-byte))))
                    (for-each
                     (lambda (byte i)
-                      (blob-set-u8! blob byte
-                                    (+ (* vertex n-bytes)
-                                       (* face n-verts n-bytes)
-                                       i)))
+                      (bytevector-u8-set! buffer 
+                                          (+ (* vertex n-bytes)
+                                             (* face n-verts n-bytes)
+                                             i)
+                                          byte))
                     bytes
                     mapping)))))
            buffer)
@@ -266,8 +161,7 @@
 (define (ascii-list el spec)
   (match-let (((name n (var ('list: list-type type))) el))
     (if* (assoc name spec)
-         (let* ((blob #f)
-                (buffer #f)
+         (let* ((buffer #f)
                 (n-bytes (type->bytes type))
                 (setter (type->setter type)))
            (dotimes (face n)
@@ -275,13 +169,13 @@
                (if (= (n-face-vertices) 0)
                    (begin
                      (n-face-vertices n-verts)
-                     (set! buffer (make-u8vector (* n n-verts n-bytes)))
-                     (set! blob (u8vector->blob/shared buffer)))
+                     (set! buffer (make-bytevector (* n n-verts n-bytes))))
                    (when (not (= (n-face-vertices) n-verts))
                      (error 'load-ply "Number of elements must be constant in face list")))
                (dotimes (vertex n-verts)
-                 (setter blob (read) (+ (* vertex n-bytes)
-                                        (* face n-verts n-bytes))))))
+                 (setter buffer (+ (* vertex n-bytes)
+                                   (* face n-verts n-bytes))
+                         (read)))))
            buffer)
          (dotimes (_ n)
            (let ((n-verts (read)))
