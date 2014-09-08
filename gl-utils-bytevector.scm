@@ -166,4 +166,8 @@
      "memcpy(&to[to_off], &from[from_off], len);")
    to from (- end start) at start))
 
+(define bytevector->pointer
+  (foreign-lambda* c-pointer ((u8vector v))
+    "C_return(v);"))
+
 ) ; end gl-utils-bytevector
