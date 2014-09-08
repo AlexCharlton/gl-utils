@@ -1,8 +1,8 @@
 (module gl-utils-ply (load-ply
-                      load-ply-vao)
+                      load-ply-mesh)
 
 (import chicken scheme)
-(use (prefix opengl-glew gl:) gl-utils-core gl-utils-bytevector
+(use (prefix opengl-glew gl:) gl-utils-core gl-utils-bytevector gl-utils-mesh
      z3 matchable srfi-42 miscmacros files srfi-1 srfi-13 extras data-structures ports)
 
 ;;; Ply
@@ -10,11 +10,11 @@
 
 (define (type->unsigned-type type)
   (case type
-    ((char: int8: byte: uchar: uint8: unsigned-byte:) gl:+unsigned-byte+)
-    ((short: int16: ushort: uint16: unsigned-short:) gl:+unsigned-short+)
+    ((char: int8: byte: uchar: uint8: unsigned-byte:) unsigned-byte:)
+    ((short: int16: ushort: uint16: unsigned-short:) unsigned-short:)
     ((int: int32: integer: integer32: uint: uint32: unsigned-int: unsigned-int32:
            unsigned-integer: unsigned-integer32:)
-     gl:+unsigned-int+)))
+     unsigned-int:)))
 
 (define (type->setter type)
   (case type
@@ -257,13 +257,12 @@
 
 (define (verts->primitive verts)
   (case verts
-    ((1) gl:+points+)
-    ((2) gl:+lines+)
-    ((3) gl:+triangles+)
-    ((4) gl:+quads+)
-    (else (error 'load-ply-vao "Unsupported number of vertices" verts))))
+    ((1) points:)
+    ((2) lines:)
+    ((3) triangles:)
+    (else (error 'load-ply-mesh "Unsupported number of vertices" verts))))
 
-(define (load-ply-vao ply #!key vertex face)
+(define (load-ply-mesh ply #!key vertex face)
   (define (attribute-vars attribute elements)
     (let* ((vertices (cddr (assoc vertex: elements)))
            (type (let loop ((els (cddr attribute))
@@ -272,28 +271,27 @@
                        type
                        (if (equal? type (second (assoc (car els) vertices)))
                            (loop (cdr els) type)
-                           (error 'load-ply-vao "Properties of the same attribute must have the same type"
+                           (error 'load-ply-mesh "Properties of the same attribute must have the same type"
                                   attribute))))))
       (list (car attribute)
             type
-            (length (cdr attribute)))))
+            (length (cdr attribute))
+            normalized: #t)))
   (let ((buffer-spec `((vertex: ,(flatten (map cdr vertex)))
                        (face: ,face))))
     (let-values (((buffers elements) (load-ply ply buffer-spec)))
       (unless (and (assoc face: elements)
                  (assoc vertex: elements))
-        (error 'load-ply-vao "Ply must contain vertex and face elements" ply))
+        (error 'load-ply-mesh "Ply must contain vertex and face elements" ply))
       (let* ((face (cdr (assoc face: elements)))
-             (n-verts (* (car face) (n-face-vertices)))
              (primitive-type (verts->primitive (n-face-vertices)))
              (element-type (type->unsigned-type (third (cadadr face))))
              (attributes (map (lambda (v) (attribute-vars v elements))
                               vertex)))
-        (values (make-vao (car buffers) (cadr buffers) attributes)
-                (car buffers)
-                (cadr buffers)
-                n-verts
-                primitive-type
-                element-type)))))
+        (make-mesh vertices: `(attributes: ,attributes
+                               initial-elements: ,(car buffers))
+                   indices: `(type: ,element-type
+                              initial-elements: ,(cadr buffers))
+                   mode: primitive-type)))))
 
 )

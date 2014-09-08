@@ -1,5 +1,5 @@
 (module gl-utils-core (type->bytes
-                       type->gl-type
+                       type->gl
                        make-shader
                        make-program
                        check-error
@@ -26,8 +26,7 @@
                        with-framebuffer
                        create-framebuffer
                        ->pointer
-                       size
-                       make-vao)
+                       size)
 
 (import chicken scheme foreign)
 (use srfi-4 matchable (prefix opengl-glew gl:) miscmacros srfi-1 lolevel)
@@ -52,7 +51,7 @@ static void showInfoLog(GLuint object){
 <#
 
 (define (type->bytes type)
-  (case type
+  (ecase type
     ((char: int8: byte: uchar: uint8: unsigned-byte:) 1)
     ((short: int16: ushort: uint16: unsigned-short:) 2)
     ((int: int32: integer: integer32: uint: uint32: unsigned-int: unsigned-int32:
@@ -60,8 +59,8 @@ static void showInfoLog(GLuint object){
      4)
     ((double: float64:) 8)))
 
-(define (type->gl-type type)
-  (case type
+(define (type->gl type)
+  (ecase type
     ((char: int8: byte:) gl:+byte+)
     ((uchar: uint8: unsigned-byte:) gl:+unsigned-byte+)
     ((short: int16:) gl:+short+)
@@ -315,7 +314,7 @@ END
     (values fbo tex rend)))
 
 
-;;; VAO creation
+;; Low-level vector/blob conveniance
 (define-syntax XXX->pointer
   (ir-macro-transformer
    (lambda (e r c)
@@ -346,7 +345,7 @@ END
    ((s32vector? v) (s32vector->pointer v))
    ((f32vector? v) (f32vector->pointer v))
    ((f64vector? v) (f64vector->pointer v))
-   (else (error 'make-vao "Not a blob or vector" v))))
+   (else (error '->pointer "Not a blob or vector" v))))
 
 (define (size v)
   (cond
@@ -359,45 +358,6 @@ END
    ((s32vector? v) (* (s32vector-length v) 4))
    ((f32vector? v) (* (f32vector-length v) 4))
    ((f64vector? v) (* (f64vector-length v) 8))
-   (else (error 'make-vao "Not a blob or vector" v))))
-
-(define (make-vao vertex-data index-data attributes
-		  #!optional (usage gl:+static-draw+))
-  (define offset 0)
-  (define stride (fold (lambda (attr str)
-			 (match attr
-			   ((_ type n . _) (+ (* n (type->bytes type)) str))
-			   (attr (error 'make-vao
-					"Expected (location type n #:key [normalize?]), got"
-					attr))))
-		       0 attributes))
-  (define (vertex-attrib location type n #!optional (normalize? #f))
-    (when location
-      (gl:vertex-attrib-pointer location n (type->gl-type type)
-                                normalize?
-                                stride (address->pointer offset))
-      (gl:enable-vertex-attrib-array location))
-    (inc! offset (* n (type->bytes type))))
-  (let ((vao (gen-vertex-array))
-	(vert-buffer (gen-buffer))
-	(index-buffer (gen-buffer)))
-    (gl:bind-vertex-array vao)
-    (gl:bind-buffer gl:+array-buffer+ vert-buffer)
-    (gl:buffer-data gl:+array-buffer+ (size vertex-data)
-		    (->pointer vertex-data) usage)
-    (for-each (match-lambda
-	       ((location type n) (vertex-attrib location type n))
-	       ((location type n 'normalize?: normalize)
-                (vertex-attrib location type n normalize))
-	       (attr (error 'make-vao "Expected (location type n #!key [normalize?]), got"
-			    attr)))
-	      attributes)
-    (gl:bind-buffer gl:+element-array-buffer+ index-buffer)
-    (gl:buffer-data gl:+element-array-buffer+ (size index-data)
-		    (->pointer index-data) usage)
-    (gl:bind-vertex-array 0)
-    (delete-buffer vert-buffer)
-    (delete-buffer index-buffer)
-    vao))
+   (else (error 'size "Not a blob or vector" v))))
 
 ) ; end gl-utils-core

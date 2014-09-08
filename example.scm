@@ -1,17 +1,16 @@
 (import chicken scheme)
-(use (prefix glfw3 glfw:) (prefix opengl-glew gl:) gl-math (prefix gl-utils gl:)
-     gl-utils-srfi-4)
+(use (prefix glfw3 glfw:) (prefix opengl-glew gl:) gl-math gl-utils)
 
 (define *vertex* 
 #<<END
 #version 330
-in vec2 vertex;
+in vec2 position;
 in vec3 color;
 out vec3 c;
 uniform mat4 MVP;
 
 void main(){
-   gl_Position = MVP * vec4(vertex, 0.0, 1.0);
+   gl_Position = MVP * vec4(position, 0.0, 1.0);
    c = color;
 }
 END
@@ -28,15 +27,21 @@ void main(){
 END
 )
 
-(define vertex-data (f32vector -1 -1 1 0 0
-                               1 -1 0 1 0
-                               1 1 0 0 1
-                               -1 1 1 0 1))
-
-(define index-data (u16vector 0 1 2
-                              0 2 3))
-
-(define vao (make-parameter #f))
+(define rect (make-mesh
+              vertices: '(attributes: ((position #:float 2)
+                                       (color #:unsigned-byte 3
+                                              normalized: #t))
+                          initial-elements: ((position . (-1 -1
+                                                           1 -1
+                                                           1  1
+                                                           -1  1))
+                                             (color . (255 0   0
+                                                       0   255 0
+                                                       0   0   255
+                                                       255 0   255))))
+              indices: '(type: #:ushort
+                         initial-elements: (0 1 2
+                                            0 2 3))))
 
 (define program (make-parameter #f))
 
@@ -56,10 +61,13 @@ END
                         1 #f
                         (m* projection-matrix
                             (m* view-matrix model-matrix)))
-  (gl:bind-vertex-array (vao))
-  (gl:draw-elements-base-vertex gl:+triangles+ 6 (gl:type->gl-type ushort:) #f 0)
+  (gl:bind-vertex-array (mesh-vao rect))
+  (gl:draw-elements-base-vertex (mode->gl (mesh-mode rect))
+                                (mesh-n-indices rect)
+                                (type->gl (mesh-index-type rect))
+                                #f 0)
 
-  (gl:check-error)
+  (check-error)
   (gl:bind-vertex-array 0))
 
 (glfw:with-window (640 480 "Example" resizable: #f
@@ -69,18 +77,19 @@ END
 
   (print (gl:supported? "GL_ARB_framebuffer_object"))
 
-  (set! *vertex* (gl:make-shader gl:+vertex-shader+ *vertex*))
-  (set! *fragment* (gl:make-shader gl:+fragment-shader+ *fragment*))
+  (set! *vertex* (make-shader gl:+vertex-shader+ *vertex*))
+  (set! *fragment* (make-shader gl:+fragment-shader+ *fragment*))
+  (program (make-program (list *vertex* *fragment*)))
 
-  (program (gl:make-program (list *vertex* *fragment*)))
-
-  (vao (gl:make-vao vertex-data index-data
-                    `((,(gl:get-attrib-location (program) "vertex") float: 2)
-                      (,(gl:get-attrib-location (program) "color") float: 3))))
+  (mesh-attribute-locations-set! rect `((position . ,(gl:get-attrib-location
+                                                      (program) "position"))
+                                        (color . ,(gl:get-attrib-location
+                                                   (program) "color"))))
+  (mesh-make-vao rect)
   (let loop ()
-     (glfw:swap-buffers (glfw:window))
-     (gl:clear (bitwise-ior gl:+color-buffer-bit+ gl:+depth-buffer-bit+))
-     (render)
-     (glfw:poll-events) ; Because of the context version, initializing GLEW results in a harmless invalid enum
-     (unless (glfw:window-should-close (glfw:window))
-       (loop))))
+    (glfw:swap-buffers (glfw:window))
+    (gl:clear (bitwise-ior gl:+color-buffer-bit+ gl:+depth-buffer-bit+))
+    (render)
+    (glfw:poll-events) ; Because of the context version, initializing GLEW results in a harmless invalid enum
+    (unless (glfw:window-should-close (glfw:window))
+      (loop))))
