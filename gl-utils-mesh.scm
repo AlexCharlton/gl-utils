@@ -12,13 +12,21 @@
                        mesh-vao
                        mesh-usage
                        mesh-attribute-locations-set!
+                       mesh-vertex-ref
+                       mesh-vertex-set!
+                       vertex-attribute-name
+                       vertex-attribute-type
+                       vertex-attribute-number
+                       vertex-attribute-normalized
+                       vertex-attribute-location
                        mesh-make-vao
+                       with-mesh
                        usage->gl
                        mode->gl)
 
-(import chicken scheme)
+(import chicken scheme foreign)
 (use (prefix gl-utils-core gl:) (prefix opengl-glew gl:) gl-utils-bytevector
-     srfi-1 srfi-99 miscmacros matchable extras lolevel)
+     srfi-1 srfi-4 srfi-99 miscmacros matchable extras lolevel)
 
 ;;;; Mesh record
 (define-record-type mesh
@@ -37,15 +45,15 @@
   (usage)
   (dirty))
 
-(define-record-type mesh-vertex-attribute
+(define-record-type vertex-attribute
   #t #t
   name type number normalized (location) (offset))
 
-(define-record-printer (mesh-vertex-attribute s out)
-  (fprintf out "#(mesh-vertex-attribute name: ~S type: ~S number: ~S normalized: ~S location: ~S offset: ~S)"
-    (mesh-vertex-attribute-name s) (mesh-vertex-attribute-type s)
-    (mesh-vertex-attribute-number s) (mesh-vertex-attribute-normalized s)
-    (mesh-vertex-attribute-location s) (mesh-vertex-attribute-offset s)))
+(define-record-printer (vertex-attribute s out)
+  (fprintf out "#(vertex-attribute name: ~S type: ~S number: ~S normalized: ~S location: ~S offset: ~S)"
+    (vertex-attribute-name s) (vertex-attribute-type s)
+    (vertex-attribute-number s) (vertex-attribute-normalized s)
+    (vertex-attribute-location s) (vertex-attribute-offset s)))
 
 (define (delete-mesh m)
   (if* (mesh-vertex-buffer m)
@@ -70,13 +78,15 @@
           (mesh-n-indices-set! mesh 0)))
     (mesh-vertex-buffer-set! mesh #f)
     (mesh-index-buffer-set! mesh #f)
+    (mesh-vao-set! mesh #f)
+    (mesh-dirty-set! mesh #f)
     (mesh-mode-set! mesh mode)
     mesh))
 
 ;;; Vertex initialization
 (define (get-vertex-attribute name attributes)
   (if* (find (lambda (attribute)
-               (equal? name (mesh-vertex-attribute-name attribute)))
+               (equal? name (vertex-attribute-name attribute)))
              attributes)
        it
        (error 'make-mesh "No attribute of this name in mesh's vertex-attributes" name attributes)))
@@ -85,7 +95,7 @@
   (let* ((lengths (map (lambda (i)
                          (if* (get-vertex-attribute (car i) attributes)
                               (quotient (length (cdr i))
-                                        (mesh-vertex-attribute-number it))
+                                        (vertex-attribute-number it))
                               (error 'make-mesh "No vertex attributes to match initial-element" (car i))))
                        init))
          (length (car lengths)))
@@ -103,7 +113,7 @@
                         (< 0 x 5)))
               n)
            . keywords)
-          (make-mesh-vertex-attribute
+          (make-vertex-attribute
            name type n
            (get-keyword normalized: keywords)
            (get-keyword location: keywords (lambda () -1))
@@ -116,29 +126,51 @@
 (define (get-stride attributes)
   (let ((offset 0))
     (fold (lambda (a n)
-            (let ((size (* (gl:type->bytes (mesh-vertex-attribute-type a))
-                           (mesh-vertex-attribute-number a))))
-              (mesh-vertex-attribute-offset-set! a offset)
+            (let ((size (* (gl:type->bytes (vertex-attribute-type a))
+                           (vertex-attribute-number a))))
+              (vertex-attribute-offset-set! a offset)
               (inc! offset size)
               (+ size n)))
           0 attributes)))
+
+(define (unsigned? type)
+  (member type '(uchar: uint8: unsigned-byte:
+                 ushort: uint16: unsigned-short:
+                 uint: uint32: unsigned-int: unsigned-int32:
+                 unsigned-integer: unsigned-integer32:)))
 
 (define (set-initial-vertices attributes stride inits vertex-vector)
   (let loop ((inits inits))
     (unless (null? inits)
       (let* ((init (car inits))
              (attribute (get-vertex-attribute (car init) attributes))
-             (set (type->setter (mesh-vertex-attribute-type attribute)))
-             (offset (mesh-vertex-attribute-offset attribute))
-             (size (gl:type->bytes (mesh-vertex-attribute-type attribute)))
-             (number (mesh-vertex-attribute-number attribute)))
+             (set (type->setter (vertex-attribute-type attribute)))
+             (offset (vertex-attribute-offset attribute))
+             (size (gl:type->bytes (vertex-attribute-type attribute)))
+             (number (vertex-attribute-number attribute))
+             (type (vertex-attribute-type attribute))
+             (de-normalize (if (and (vertex-attribute-normalized attribute)
+                                  (not (member type
+                                             '(float: float32: double: float64:))))
+                               (if (unsigned? type)
+                                   (lambda (x)
+                                     (inexact->exact
+                                      (round (* (max -1 (min 1 x))
+                                                (sub1 (expt 2 (* size 8)))))))
+                                   (lambda (x)
+                                     (- (inexact->exact
+                                         (round (* (add1 (max -1 (min 1 x)))
+                                                   0.5
+                                                   (sub1 (expt 2 (* size 8))))))
+                                        (expt 2 (sub1 (* size 8))))))
+                            (lambda (x) x))))
         (do ((i 0 (add1 i))
              (init (cdr init) (cdr init)))
             ((null? init))
           (set vertex-vector (+ (* (quotient i number) stride)
                                 (* (remainder i number) size)
                                 offset)
-               (car init))))
+               (de-normalize (car init)))))
       (loop (cdr inits)))))
 
 (define (make-mesh-vertices mesh vertices)
@@ -199,38 +231,85 @@
 
 
 ;;;; Mesh accessors
-
 (define (mesh-attribute-locations-set! mesh locations)
   (let ((attributes (mesh-vertex-attributes mesh)))
     (let loop ((locations locations))
       (unless (null? locations)
         (let ((attribute (get-vertex-attribute (caar locations) attributes)))
-          (mesh-vertex-attribute-location-set! attribute (cdar locations)))
+          (vertex-attribute-location-set! attribute (cdar locations)))
         (loop (cdr locations))))))
 
-#;
 (define (with-mesh mesh thunk)
   (gl:bind-buffer gl:+array-buffer+ (mesh-vertex-buffer mesh))
   (thunk)
-  (when (mesh-dirty? mesh)
-    (case (mesh-usage mesh)
-      ((dynamic:) (gl:buffer-sub-data ; TODO
-                   ))
-      ((stream:) (gl:buffer-data   ; TODO
-                   ))))
+  (if* (mesh-dirty mesh)
+       (let ((usage (mesh-usage mesh)))
+         (case usage
+           ((dynamic:)
+            (print it)
+            (let ((lower (car it))
+                  (upper (cdr it)))
+              (gl:buffer-sub-data gl:+array-buffer+
+                                  (car it)
+                                  (- upper lower)
+                                  (pointer+ (bytevector->pointer
+                                             (mesh-vertex-data mesh))
+                                            lower))))
+           ((stream:)
+            (gl:buffer-data gl:+array-buffer+
+                            (* (mesh-stride mesh)
+                               (mesh-n-vertices mesh))
+                            (bytevector->pointer (mesh-vertex-data mesh))
+                            (usage->gl usage))))
+         (mesh-dirty-set! mesh #f)))
   (gl:bind-buffer gl:+array-buffer+ 0))
 
-#;
-(define (mesh-vertex-set! mesh vertex attribute attr-index value)  ;; make value a vector and remove attr-index?
-  ;; Set mesh-dirty min max index
-  (mesh-dirty-set! mesh #t))
+(define (mesh-vertex-set! mesh attribute vertex value)
+  (when (or (negative? vertex) (>= vertex (mesh-n-vertices mesh)))
+    (error 'mesh-vertex-ref "Vertex not in range" vertex))
+  (let* ((attribute (get-vertex-attribute attribute (mesh-vertex-attributes mesh)))
+         (type (vertex-attribute-type attribute))
+         (number (vertex-attribute-number attribute))
+         (length (* (gl:type->bytes type) number))
+         (offset (vertex-attribute-offset attribute))
+         (stride (mesh-stride mesh))
+         (position (+ offset (* stride vertex))))
+    ((foreign-lambda* void ((u8vector to) (c-pointer from) (size_t start)
+                            (size_t length))
+       "memcpy((&((char *)to)[start]), from, length);")
+     (mesh-vertex-data mesh) (gl:->pointer value) position length)
+    (when (mesh-vertex-buffer mesh)
+      (if (member (mesh-usage mesh) '(stream: stream-read: stream-copy:))
+          (mesh-dirty-set! mesh #t)
+          (let* ((dirty (mesh-dirty mesh))
+                 (lower (if dirty
+                            (min (car dirty) position)
+                            position))
+                 (upper (if dirty
+                            (max (cdr dirty) (+ position length))
+                            (+ position length))))
+            (mesh-dirty-set! mesh (cons lower upper)))))))
 
-#;
-(define (mesh-vertex-ref mesh vertex attribute attr-index)
-  )
+(define (mesh-vertex-ref mesh attribute vertex)
+  (when (or (negative? vertex) (>= vertex (mesh-n-vertices mesh)))
+    (error 'mesh-vertex-ref "Vertex not in range" vertex))
+  (let* ((attribute (get-vertex-attribute attribute (mesh-vertex-attributes mesh)))
+         (type (vertex-attribute-type attribute))
+         (number (vertex-attribute-number attribute))
+         (length (* (gl:type->bytes type) number))
+         (offset (vertex-attribute-offset attribute))
+         (stride (mesh-stride mesh))
+         (vec ((type->make-vector type) number)))
+    ((foreign-lambda* void ((c-pointer to) (u8vector from) (size_t start)
+                            (size_t length))
+       "memcpy(to, (&((char *)from)[start]), length);")
+     (gl:->pointer vec) (mesh-vertex-data mesh) (+ (* stride vertex) offset) length)
+    vec))
 
 ;;;; Mesh operations
 (define (mesh-make-vao mesh #!optional (usage #:static))
+  (when (mesh-vao mesh)
+    (error 'mesh-make-vao "Mesh already has vao" mesh))
   (let* ((vao (gl:gen-vertex-array))
          (stride (mesh-stride mesh))
          (vertex-buffer (gl:gen-buffer))
@@ -254,14 +333,14 @@
     (gl:bind-vertex-array vao)
     (for-each (lambda (attribute)
                 (gl:vertex-attrib-pointer
-                 (mesh-vertex-attribute-location attribute)
-                 (mesh-vertex-attribute-number attribute)
-                 (gl:type->gl (mesh-vertex-attribute-type attribute))
-                 (mesh-vertex-attribute-normalized attribute)
+                 (vertex-attribute-location attribute)
+                 (vertex-attribute-number attribute)
+                 (gl:type->gl (vertex-attribute-type attribute))
+                 (vertex-attribute-normalized attribute)
                  stride
-                 (address->pointer (mesh-vertex-attribute-offset attribute)))
+                 (address->pointer (vertex-attribute-offset attribute)))
                 (gl:enable-vertex-attrib-array
-                 (mesh-vertex-attribute-location attribute)))
+                 (vertex-attribute-location attribute)))
               (mesh-vertex-attributes mesh))
     (when index-data
       (gl:bind-buffer gl:+element-array-buffer+ index-buffer))
@@ -303,6 +382,19 @@
                      int: int32: uint: uint32: unsigned-int: unsigned-int32:
                      integer: integer32:  unsigned-integer: unsigned-integer32:
                      float: float32: double: float64:))
+
+(define (type->make-vector type)
+  (ecase type
+    ((char: int8: byte:) make-s8vector)
+    ((uchar: uint8: unsigned-byte:) make-u8vector)
+    ((short: int16:) make-s16vector)
+    ((ushort: uint16: unsigned-short:) make-u16vector)
+    ((int: int32: integer: integer32:) make-s32vector)
+    ((uint: uint32: unsigned-int: unsigned-int32:
+	    unsigned-integer: unsigned-integer32:)
+     make-u32vector)
+    ((float: float32:) make-f32vector)
+    ((double: float64:) make-f64vector)))
 
 (define (type->setter type)
   (ecase type
