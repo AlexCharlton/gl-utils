@@ -1,10 +1,12 @@
 # gl-utils
 Provides a higher level interface to OpenGL. The following modules are included:
 
-- opengl-utils: Exports all of the modules in this egg
-- opengl-utils-core: Convenience procedures for OpenGL, abstracting over common tasks
-- opengl-utils-srfi-4: OpenGL-safe numeric vectors
-- opengl-utils-ply: [PLY](http://paulbourke.net/dataformats/ply/) file loading
+- gl-utils: Exports all of the modules in this egg
+- gl-utils-core: Convenience procedures for OpenGL, abstracting over common tasks
+- gl-utils-bytevector: OpenGL-safe R7RS style bytevectors with extended accessors
+- gl-utils-mesh: Convenient vertex array interface for creation, modification, and use
+- gl-utils-ply: [PLY](http://paulbourke.net/dataformats/ply/) file loading
+- gl-utils-srfi-4: OpenGL-safe numeric vectors
 
 ## Installation
 This repository is a [Chicken Scheme](http://call-cc.org/) egg.
@@ -16,6 +18,8 @@ It is part of the [Chicken egg index](http://wiki.call-cc.org/chicken-projects/e
 - matchable
 - miscmacros
 - srfi-42
+- opengl-glew
+- gl-math
 - make
 
 ## Documentation
@@ -77,16 +81,6 @@ Conveniently set the most common properties of the texture `ID`. `TYPE` is the t
 
 Create a framebuffer with a texture and depth renderbuffer attached. The texture and renderbuffer are given the dimensions `WITH` and `HEIGHT`. `CHANNELS` is the number of channels that the texture has: 1, 2, 3, or 4, corresponding to `+red+`, `+rg+`, `+rgb+, and `+rgba+ respectively, defaulting to 4. `TYPE` is the type of the texture data which defaults to `+unsigned-byte+`. Returns three values: The framebuffer, the texture, and the renderbuffer.
 
-    [procedure] (make-vao VERTEX-DATA INDEX-DATA ATTRIBUTES [USAGE])
-
-`make-vao` generalizes the typically repetitious code used to initialize vertex attribute objects. It deals with the case of having packed vertex data (`VERTEX-DATA`) and a vector of indices (`INDEX-DATA`) for those vertexes. This data may be passed as any sort of (srfi-4) vector or a blob.
-
-`ATTRIBUTES` is the list of data necessary for the vertex attributes, in the form of `((LOCATION TYPE N [normalize?: NORMALIZE?]) ...)`. `LOCATION` is the attribute location which may be given as `#f` if the attribute is not used. `TYPE` is the type of data corresponding to the given attribute, given as a keyword. For possible types, see `type->gl-type`. `N` is the number of elements for the given attribute. The keyword `normalize?:` accepts a boolean argument which instructs OpenGL to normalize the attribute or not. Defaults to `#f`.
-
-The optional `USAGE` must be one of `+stream-data+`, `+stream-read+`, `+stream-copy+`, `+static-data+`, `+static-read+`, `+static-copy+`, `+dynamic-data+`, `+dynamic-read+`, `+dynamic-copy+`. Defaults to `+static-draw+`.
-
-`make-vao` returns the ID of a vertex array object. This object should be deleted with `delete-vertex-array` when no longer used. Intermediate vertex buffers are generated and deleted, thus only the returned vertex array ID needs to be managed.
-
     [procedure] (->pointer VECTOR)
 
 Returns the pointer to a srfi-4 vector or blob.
@@ -97,9 +91,9 @@ Returns the size, in bytes, of a srfi-4 vector or blob.
 
     [procedure] (type->bytes TYPE)
 
-Returns the size of `TYPE` (as accepted by `type->gl-type`) in number of bytes.
+Returns the size of `TYPE` (as accepted by `type->gl`) in number of bytes.
 
-    [procedure] (type->gl-type TYPE)
+    [procedure] (type->gl TYPE)
 
 Converts the keyword `TYPE` into a OpenGL type enum value. Accepted types (grouped by synonyms) are: 
 
@@ -111,14 +105,6 @@ Converts the keyword `TYPE` into a OpenGL type enum value. Accepted types (group
 - `uint:` `uint32:` `unsigned-int:` `unsigned-int32:` `unsigned-integer:` `unsigned-integer32:`
 - `float:` `float32:`
 - `double:` `float64:`
-
-
-### gl-utils-srfi4
-gl-utils-srfi4 reexports a version of [srfi-4](http://api.call-cc.org/doc/srfi-4) that gives preference to vectors being created in non-garbage collected memory. This is useful for use with OpenGL, since it is often desirable to pass vectors to OpenGL that will remain in one place. All srfi-4 functions not mentioned below are reexported without changes.
-
-The `NNNvector` and `list->NNNvector` constructors have been modified so that they return vectors in non-garbage collected memory. They will still be freed when no longer used.
-
-The `make-NNNvector` constructors act as their srfi-4 counterparts, except they return vectors in non-garbage collected memory by default. They will still be freed when non longer used.
 
 
 ### gl-utils-bytevector
@@ -186,9 +172,13 @@ Sets the byte `K` of the given bytevector to be the value of the given fixnum or
 
 Returns the fixnum or flonum of the given size located at byte `K` of the given bytevector. These functions are unsafe, so be sure `K` is a valid location in the bytevector.
 
+    [procedure] (bytevector–>pointer BYTEVECTOR)
+
+Returns the pointer to `BYTEVECTOR`’s data.usage 
+
     [procedure] (bytevector-append BYTEVECTOR . BYTEVECTORSS)
 
-Returns a newly allocated bytevector whose elements are the concatenation of the elements in the given bytevectors. If only one element is given, it is assumed that it is a list of bytevectors.
+Returns a newly allocated bytevector whose elements are the concatenation of the elements in the given bytevectors. If only one argument is passed to `bytevector-append`, it is assumed that it is a list of bytevectors.
 
     [procedure] (bytevector-copy BYTEVECTOR [START] [END])
 
@@ -197,6 +187,110 @@ Returns a newly allocated copy of the elements of the given bytevector between `
     [procedure] (bytevector-copy! TO AT FROM [START] [END])
 
 Copies the elements of bytevector `FROM` between `START` and `END` to bytevector `TO`, starting at `AT`. It is an error if `AT` is less than zero or greater than the length of `TO`. It is also an error if `(- (bytevector-length TO) AT)` is less than `(- END START)`.
+
+
+### gl-utils-mesh
+    [procedure] (make-mesh vertices: VERTICES [indices: INDICES] [mode: MODE])
+
+`VERTICES` is a list of key value pairs that specifies the mesh’s vertex data. It should be in the form:
+
+    (attributes: ATTRIBUTES [initial-elements: INITIAL-ELEMENTS] [n-vertices: N-VERTICES])
+
+`ATTRIBUTES` is a list in the form:
+
+    (NAME TYPE N [normalized: NORMALIZED] [location: LOCATION])
+
+where `NAME` is the attribute name (as a symbol), `TYPE` is the type of the attribute as accepted by `type->gl`, `N` is the number of elements in the attribute, `NORMALIZED` is a boolean value indicating whether the attribute’s values should be normalized (defaulting to `#f`), and `LOCATION` is the shader attribute-location of the attribute (defaulting to -1 and settable by `mesh-attribute-locations-set!`.
+
+`INITIAL-ELEMENTS` is either a bytevector or a list of `(NAME . VALUE)` pairs where name is the name of the attribute to set (as per the name given in `ATTRIBUTES`) and `VALUE` is the initial contents of that attribute. When a list is given and more than one attribute is given initial-elements, the `VALUE`s should represent the same number of vertices. Values associated with attributes that are NORMALIZED should be provided as floats, which are then normalized. If `INITIAL-ELEMENTS` is given as a bytevector, that bytevector is used as the entire mesh’s vertex data and `N-VERTICES` – the number of vertices – must be provided.
+
+`INDICES` is an optional list of key value pairs that specifies the mesh’s index data, if it exists. It should be in the form:
+
+    (type: TYPE [initial-elements: INITIAL-ELEMENTS] [n-indices: N-INDICES])
+
+`TYPE` is a type keyword (as accepted by `type->gl`) that must be a valid type for an element array buffer (i.e. an unsigned fixnum). `INITIAL-ELEMENTS` is either a bytevector or a list of values. If `INITIAL-ELEMENTS` is given as a bytevector,  `N-INDICES` – the number of indices – must be provided.
+
+`MODE` is the keyword (as accepted by `mode->gl`) that defines what the mesh is supposed to represent. Defaults to `#:triangles`.
+
+    [record] (mesh VERTEX-ATTRIBUTES INDEX-TYPE VERTEX-DATA INDEX-DATA N-VERTICES N-INDICES VERTEX-BUFFER INDEX-BUFFER VAO STRIDE MODE USAGE)
+
+The type of record returned by make-mesh. `VERTEX-ATTRIBUTES` is a list of `vertex-attribute` records. `INDEX-TYPE` is the type given to the `indices:` argument of `make-mesh`. `VERTEX-DATA` and `INDEX-DATA` are the bytevectors representing the vertex and index data. `N-VERTICES` and `N-INDICES` are the number of vertices and indices present in the data. `VERTEX-BUFFER`, `INDEX-BUFFER` and `VAO` are the vertex buffers and VAO created by `mesh-make-vao!`. `STRIDE` is the number of bytes between the start of consecutive vertices. `MODE` is the value of the `mode:` argument provided to `make-mesh`. `USAGE` is the buffer usage that is set with `make-mesh-vao!`.
+
+    [record] (vertex-attribute name type number normalized location)
+
+The type of record returned by `mesh-vertex-attributes`. Getters for all of the fields are provided.
+
+    [procedure] (mesh-attribute-locations-set! MESH LOCATIONS)
+
+Set the shader attribute locations of the attributes of `MESH`. `LOCATIONS` is a list of `(ATTRIBUTE-NAME . LOCATION)` pairs.
+
+    [procedure] (mesh-make-vao! MESH [USAGE])
+
+Create a vertex attribute object (VAO) for `MESH`. `USAGE` is the buffer usage hint keyword as accepted by `usage->gl`, defaulting to `#:static`. Vertex buffer objects (VBOs) are created for the vertex and index data. The VAO binds these buffers, and sets the vertex attribute pointers. If the usage is one of the static types, the vertex and index data of the mesh are deleted, as are the vertex and index buffers. Attribute locations should be set for the mesh with `mesh-attribute-locations-set!` before calling `mesh-make-vao!`.
+
+    [procedure] (mesh-vertex-ref MESH ATTRIBUTE VERTEX)
+
+Return a vector containing the values of the attribute named ATTRIBUTE corresponding to the `VERTEX`th vertex of the `MESH`. The result will be a srfi-4 numeric vector, corresponding to the type of the given attribute.
+
+    [procedure] (mesh-vertex-set! MESH ATTRIBUTE VERTEX VALUE)
+
+Set the `VERTEX`th vertex of the `MESH`’s attribute named `ATTRIBUTE` to the values provided by the srfi-4 numeric vector `VALUE`. `VALUE` must correspond to the type of the attribute, and should be the same length as the attribute. Using a `VALUE` that is too short is unsafe.
+
+If `mesh-make-vao!` has been called already, `mesh-vertex-set!` should be called inside a `with-mesh`. If `mesh-make-vao!` was called with a static usage, `mesh-vertex-set! will result in an error, since there is no longer any vertex data to set.
+
+    [procedure] (with-mesh MESH THUNK)
+
+Calls `THUNK` with the VBO of the `MESH`’s vertex buffer bound. If the mesh has been modified by `mesh-vertex-set!`, the vertex buffer’s data will be updated before the VBO is unbound. When the usage hint given to `mesh-make-vao!` is dynamic, `buffer-sub-data` will be used to update the buffer data. When the usage hint is stream, `buffer-data` will be used.
+
+    [procedure] (mesh-copy! TO AT FROM [START] [END])
+
+Similar to `bytevector-copy!`, copies the vertices of mesh `FROM` between vertices `START` and `END` to mesh `TO`, starting at vertex `AT`.
+
+    [procedure] (mesh-copy MESH)
+
+Creates a fresh copy of `MESH`.
+
+    [procedure] (mesh-append MESH . MESHES)
+
+Creates a new mesh resulting from appending the vertices of the given meshes together. The indices are also appended and modified so they point to the same vertices. The attributes of all the meshes are assumed to be the same, otherwise bad things will probably happen. If only one argument is passed to `mesh-append` it is assumed that it is a list of meshes.
+
+    [procedure] (mesh-transform! POSITION-NAME MESH TRANSFORM)
+
+Destructively modifies the `POSITION-NAME` attribute of `MESH` by the [gl-math](http://wiki.call-cc.org/eggref/4/gl-math) matrix `TRANSFORM`. `POSITION-NAME` must be the name of a three element float attribute of `MESH`.
+
+    [procedure] (mesh-transform-append POSITION-NAME MESH-TRANSFORM-PAIR . MESH-TRANSFORM-PAIRS)
+
+Creates a new mesh resulting by appending all the given meshes together, then transforming the attribute named by `POSITION-NAME` by the given [gl-math](http://wiki.call-cc.org/eggref/4/gl-math) transform matrices. `MESH-TRANSFORM-PAIR` and `MESH-TRANSFORM-PAIRS` are `(MESH . TRANFORM)` pairs. `POSITION-NAME` must be the name of a three element float attribute of `MESH`. The attributes of all the meshes are assumed to be the same, otherwise bad things will probably happen. If only two arguments are passed to `mesh-transform-append` it is assumed that the second is a list of mesh/transform pairs.
+
+    [procedure] (usage->gl USAGE)
+
+Converts the keyword `USAGE` into a OpenGL usage enum value. Accepted usages (grouped by synonyms) are: 
+
+- dynamic: dynamic-draw:
+- stream: stream-draw:
+- static: static-draw:
+- dynamic-read:
+- stream-read:
+- static-read:
+- dynamic-copy:
+- stream-copy:
+- static-copy:
+
+    [procedure] (mode->gl MODE)
+
+Converts the keyword `MODE` into a OpenGL mode enum value. Accepted modes are: 
+
+- points:
+- line-strip:
+- line-loop:
+- line-strip-adjacency:
+- lines-adjacency:
+- triangle-strip:
+- triangle-fan:
+- triangles:
+- triangle-strip-adjacency:
+- triangles-adjacency:
+- patches:
 
 
 ### gl-utils-ply
@@ -216,43 +310,46 @@ The buffers returned are packed with the contents of the properties named in the
 
 This buffer spec would result in a list of two u8vectors being returned: one with the packed elements corresponding to properties `x`, `y`, `z`, `r`, `g`, and `b` (with the corresponding property types), and the second containing the vertex indices.
 
-    [procedure] (load-ply-vao FILE vertex: VERTEX face: FACE)
+    [procedure] (load-ply-mesh FILE vertex: VERTEX face: FACE)
 
-Similar to `load-ply`, but returns a number of values:
-
-- A vertex array ID as generated by `make-vao`. 
-- A u8vector representing the vertex data of the model
-- A u8vector representing the index data of the model
-- The number of vertices of the model
-- The GL enum value of the type of primitive used for the model (e.g. `+triangles+`)
-- The GL enum value of the element data type 
-
-`FILE` is a PLY file (which may be gziped). The PLY file must contain at least the elements `vertex` and `face` (other elements will be ignored). `VERTEX` is a list of `(attribute-location property-name ...)` elements, which specifies how the vertex buffers of the VAO will be arranged. All properties named by each element of `VERTEX` must be of the same type. `FACE` is the name of the face property list.
+Similar to load-ply, but returns a mesh. `FILE` is a PLY file (which may be gziped). The PLY file must contain at least the elements `vertex` and `face` (other elements will be ignored). `VERTEX` is a list of `(ATTRIBUTE-NAME PROPERTY-NAME ...)` elements, which specifies which PLY properties are associate with which attribute, in which order. Attributes are all normalized. All properties named by each element of `VERTEX` must be of the same type. `FACE` is the name of the face property list.
 
 Again, for a PLY file that has element `vertex` with properties `float x`, `float y`, `float z`, `float confidence`, `uchar r`, `uchar g`, and `uchar b`, as well as a element `face` with a property list `uchar ushort vertex_index`, the following could be used:
 
-    (load-ply-vao "example.ply" vertex: `((,vertex-location x y z) 
-                                          (,color-location r g b))
+    (load-ply-vao "example.ply" vertex: `((position x y z) 
+                                          (color r g b))
                                 face: vertex_index)
+
+This would create a mesh with vertex attributes `(position #:float 3)` and `(color #:unsigned-byte 3 normalized: #t)` and the `#:unsigned-short` indices given by `vertex_index`.
+
+
+### gl-utils-srfi4
+gl-utils-srfi4 reexports a version of [srfi-4](http://api.call-cc.org/doc/srfi-4) that gives preference to vectors being created in non-garbage collected memory. This is useful for use with OpenGL, since it is often desirable to pass vectors to OpenGL that will remain in one place. All srfi-4 functions not mentioned below are reexported without changes.
+
+The `NNNvector` and `list->NNNvector` constructors have been modified so that they return vectors in non-garbage collected memory. They will still be freed when no longer used.
+
+The `make-NNNvector` constructors act as their srfi-4 counterparts, except they return vectors in non-garbage collected memory by default. They will still be freed when non longer used.
+
 
 ## Examples
 This example depends on the [opengl-glew](http://wiki.call-cc.org/eggref/4/opengl-glew) egg, the [glfw3](http://wiki.call-cc.org/eggref/4/glfw3) egg for window and context creation, and the [gl-math](http://wiki.call-cc.org/eggref/4/gl-math) egg for matrix math.
 
+For more examples, check out the [examples directory](https://github.com/AlexCharlton/gl-utils/tree/master/examples).
+
 ```Scheme
 (import chicken scheme)
-(use (prefix glfw3 glfw:) (prefix opengl-glew gl:) gl-math (prefix gl-utils gl:)
-     gl-utils-srfi-4)
+(use (prefix glfw3 glfw:) (prefix opengl-glew gl:) gl-math gl-utils)
 
 (define *vertex* 
 #<<END
 #version 330
-in vec2 vertex;
+in vec2 position;
 in vec3 color;
 out vec3 c;
 uniform mat4 MVP;
 
 void main(){
-   gl_Position = MVP * vec4(vertex, 0.0, 1.0);
+   gl_Position = MVP * vec4(position, 0.0, 1.0);
    c = color;
 }
 END
@@ -269,15 +366,21 @@ void main(){
 END
 )
 
-(define vertex-data (f32vector -1 -1 1 0 0
-                               1 -1 0 1 0
-                               1 1 0 0 1
-                               -1 1 1 0 1))
-
-(define index-data (u16vector 0 1 2
-                              0 2 3))
-
-(define vao (make-parameter #f))
+(define rect (make-mesh
+              vertices: '(attributes: ((position #:float 2)
+                                       (color #:unsigned-byte 3
+                                              normalized: #t))
+                          initial-elements: ((position . (-1 -1
+                                                           1 -1
+                                                           1  1
+                                                           -1  1))
+                                             (color . (255 0   0
+                                                       0   255 0
+                                                       0   0   255
+                                                       255 0   255))))
+              indices: '(type: #:ushort
+                         initial-elements: (0 1 2
+                                            0 2 3))))
 
 (define program (make-parameter #f))
 
@@ -297,10 +400,13 @@ END
                         1 #f
                         (m* projection-matrix
                             (m* view-matrix model-matrix)))
-  (gl:bind-vertex-array (vao))
-  (gl:draw-elements-base-vertex gl:+triangles+ 6 (gl:type->gl-type ushort:) #f 0)
+  (gl:bind-vertex-array (mesh-vao rect))
+  (gl:draw-elements-base-vertex (mode->gl (mesh-mode rect))
+                                (mesh-n-indices rect)
+                                (type->gl (mesh-index-type rect))
+                                #f 0)
 
-  (gl:check-error)
+  (check-error)
   (gl:bind-vertex-array 0))
 
 (glfw:with-window (640 480 "Example" resizable: #f
@@ -310,24 +416,32 @@ END
 
   (print (gl:supported? "GL_ARB_framebuffer_object"))
 
-  (set! *vertex* (gl:make-shader gl:+vertex-shader+ *vertex*))
-  (set! *fragment* (gl:make-shader gl:+fragment-shader+ *fragment*))
+  (set! *vertex* (make-shader gl:+vertex-shader+ *vertex*))
+  (set! *fragment* (make-shader gl:+fragment-shader+ *fragment*))
+  (program (make-program (list *vertex* *fragment*)))
 
-  (program (gl:make-program (list *vertex* *fragment*)))
-
-  (vao (gl:make-vao vertex-data index-data
-                    `((,(gl:get-attrib-location (program) "vertex") float: 2)
-                      (,(gl:get-attrib-location (program) "color") float: 3))))
+  (mesh-attribute-locations-set! rect `((position . ,(gl:get-attrib-location
+                                                      (program) "position"))
+                                        (color . ,(gl:get-attrib-location
+                                                   (program) "color"))))
+  (mesh-make-vao! rect)
   (let loop ()
-     (glfw:swap-buffers (glfw:window))
-     (gl:clear (bitwise-ior gl:+color-buffer-bit+ gl:+depth-buffer-bit+))
-     (render)
-     (glfw:poll-events) ; Because of the context version, initializing GLEW results in a harmless invalid enum
-     (unless (glfw:window-should-close (glfw:window))
-       (loop))))
+    (glfw:swap-buffers (glfw:window))
+    (gl:clear (bitwise-ior gl:+color-buffer-bit+ gl:+depth-buffer-bit+))
+    (render)
+    (glfw:poll-events) ; Because of the context version, initializing GLEW results in a harmless invalid enum
+    (unless (glfw:window-should-close (glfw:window))
+      (loop))))
 ```
 
 ## Version history
+### Version 0.2.0
+10 September 2014
+
+* Add gl-utils-bytevector module
+* Add gl-utils-mesh module
+* Remove now-unneeded (and broken) `make-vao`, `make-ply-vao`
+
 ### Version 0.1.2
 
 2 September 2014
