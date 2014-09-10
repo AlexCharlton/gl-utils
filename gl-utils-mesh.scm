@@ -21,12 +21,17 @@
                        vertex-attribute-location
                        mesh-make-vao
                        with-mesh
+                       copy-mesh!
+                       copy-mesh
+                       mesh-append
+                       mesh-transform!
+                       mesh-transform-append
                        usage->gl
                        mode->gl)
 
 (import chicken scheme foreign)
 (use (prefix gl-utils-core gl:) (prefix opengl-glew gl:) gl-utils-bytevector
-     srfi-1 srfi-4 srfi-99 miscmacros matchable extras lolevel)
+     srfi-1 srfi-4 srfi-99 miscmacros matchable extras lolevel gl-math)
 
 ;;;; Mesh record
 (define-record-type mesh
@@ -246,7 +251,6 @@
        (let ((usage (mesh-usage mesh)))
          (case usage
            ((dynamic:)
-            (print it)
             (let ((lower (car it))
                   (upper (cdr it)))
               (gl:buffer-sub-data gl:+array-buffer+
@@ -264,6 +268,7 @@
          (mesh-dirty-set! mesh #f)))
   (gl:bind-buffer gl:+array-buffer+ 0))
 
+;; Note: value is unsafe: entering a vector that is too short will have unspecified, bad consequences.
 (define (mesh-vertex-set! mesh attribute vertex value)
   (when (or (negative? vertex) (>= vertex (mesh-n-vertices mesh)))
     (error 'mesh-vertex-ref "Vertex not in range" vertex))
@@ -360,20 +365,107 @@
       (gl:delete-buffer vertex-buffer)
       (gl:delete-buffer index-buffer))))
 
-#;
-(define (copy-mesh! to at from))
+(define (copy-mesh! to at from
+                    #!optional (start 0) (end (mesh-n-vertices mesh)))
+  (let ((stride (mesh-stride from)))
+    (bytevector-copy! (mesh-vertex-data to) (* at (mesh-stride to))
+                      (mesh-vertex-data from) (* start stride) (* end stride))))
 
-  #;
-(define (copy-mesh mesh))
+(define (copy-mesh mesh)
+  (make-mesh vertices: `(attributes: ,(map (lambda (a)
+                                             (list (vertex-attribute-name a)
+                                                   (vertex-attribute-type a)
+                                                   (vertex-attribute-number a)
+                                                   normalized:
+                                                   (vertex-attribute-normalized a)))
+                                           (mesh-vertex-attributes mesh))
+                         initial-elements: ,(bytevector-copy (mesh-vertex-data mesh)))
+             indices: `(type: ,(mesh-index-type mesh)
+                        initial-elements: ,(bytevector-copy (mesh-index-data mesh)))))
 
-#;
-(define (mesh-append mesh . meshes))
+(define (mesh-append mesh . meshes)
+  (let* ((meshes (if (null? meshes)
+                     mesh
+                     (cons mesh meshes)))
+         (mesh (car meshes))
+         (new (make-mesh vertices:
+                         `(attributes: ,(map (lambda (a)
+                                               (list (vertex-attribute-name a)
+                                                     (vertex-attribute-type a)
+                                                     (vertex-attribute-number a)
+                                                     normalized:
+                                                     (vertex-attribute-normalized a)))
+                                             (mesh-vertex-attributes mesh))
+                           initial-elements: ,(bytevector-append
+                                               (map mesh-vertex-data meshes)))
+                         indices:
+                         `(type: ,(mesh-index-type mesh)
+                           initial-elements: ,(bytevector-append
+                                               (map mesh-index-data meshes)))))
+         (index-data (mesh-index-data new))
+         (index-type (mesh-index-type new))
+         (index-size (gl:type->bytes index-type))
+         (set (type->setter index-type))
+         (get (type->getter index-type)))
+    (let loop ((meshes meshes) (index-index 0) (vertex-offset 0))
+      (if (null? meshes)
+          new
+          (let* ((mesh (car meshes))
+                 (n-vertices (mesh-n-vertices mesh))
+                 (n-indices (mesh-n-indices mesh)))
+            (do ((i 0 (add1 i)))
+                ((= i n-indices))
+              (let ((k (* (+ index-index i) index-size)))
+                (set index-data k
+                     (+ (get index-data k)
+                        vertex-offset))))
+            (loop (cdr meshes)
+                  (+ index-index n-indices)
+                  (+ vertex-offset n-vertices)))))))
 
-#;
-(define (mesh-transform-append position-name pair . pairs))
+(define (mesh-transform! position-name mesh transform
+                         #!optional (start 0) (end (mesh-n-vertices mesh)))
+  (when (or (negative? start) (> end (mesh-n-vertices mesh))
+           (<= (- end start) 0))
+    (error 'mesh-vertex-ref "Bad vertex range" start end))
+  (let ((offset (vertex-attribute-offset
+                 (get-vertex-attribute position-name
+                                       (mesh-vertex-attributes mesh))))
+        (stride (mesh-stride mesh)))
+    (print `(m*vector-array! ,transform
+                             (pointer+ (bytevector->pointer (mesh-vertex-data mesh))
+                                       ,(+ offset (* start stride)))
+                             stride: ,stride
+                             length: ,(- end start)))
+    (m*vector-array! transform
+                     (pointer+ (bytevector->pointer (mesh-vertex-data mesh))
+                               (+ offset (* start stride)))
+                     stride: stride
+                     length: (- end start))))
 
-#;
-(define (mesh-apply-transform! position-name mesh transform))
+(define (mesh-transform-append position-name pair . pairs)
+  (let* ((pairs (if (null? pairs)
+                    pair
+                    (cons pair pairs)))
+         (meshes (map car pairs))
+         (transforms (map cdr pairs))
+         (mesh (mesh-append meshes))
+         (offset (vertex-attribute-offset
+                  (get-vertex-attribute position-name
+                                        (mesh-vertex-attributes mesh))))
+         (stride (mesh-stride mesh))
+         (vertex-data (mesh-vertex-data mesh)))
+    (let loop ((meshes meshes) (transforms transforms) (vertex-offset 0))
+      (if (null? meshes)
+          mesh
+          (let ((n-vertices (mesh-n-vertices (car meshes))))
+            (m*vector-array! (car transforms)
+                             (pointer+ (bytevector->pointer vertex-data)
+                                       (+ offset (* vertex-offset stride)))
+                             stride: stride
+                             length: n-vertices)
+            (loop (cdr meshes) (cdr transforms)
+                  (+ vertex-offset n-vertices)))))))
 
 
 ;;;; Type keywords
@@ -408,6 +500,19 @@
      bytevector-u32-set!)
     ((float: float32:) bytevector-f32-set!)
     ((double: float64:) bytevector-f64-set!)))
+
+(define (type->getter type)
+  (ecase type
+    ((char: int8: byte:) bytevector-s8-ref)
+    ((uchar: uint8: unsigned-byte:) bytevector-u8-ref)
+    ((short: int16:) bytevector-s16-ref)
+    ((ushort: uint16: unsigned-short:) bytevector-u16-ref)
+    ((int: int32: integer: integer32:) bytevector-s32-ref)
+    ((uint: uint32: unsigned-int: unsigned-int32:
+	    unsigned-integer: unsigned-integer32:)
+     bytevector-u32-ref)
+    ((float: float32:) bytevector-f32-ref)
+    ((double: float64:) bytevector-f64-ref)))
 
 (define (usage->gl usage)
   (ecase usage
