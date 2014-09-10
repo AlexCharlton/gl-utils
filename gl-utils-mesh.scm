@@ -214,8 +214,8 @@
                                     (error 'make-mesh "indices: keyword must contain a type: keyword"
                                            indices))))
          (stride (gl:type->bytes index-type)))
-    (unless (member index-type valid-type)
-      (error 'make-mesh "Mesh index-type must be a valid type)" index-type))
+    (unless (unsigned? index-type)
+      (error 'make-mesh "Mesh index-type must be a valid, unsigned type)" index-type))
     (mesh-index-type-set! mesh index-type)
     (if (bytevector? index-init)
         (begin (mesh-index-data-set! mesh index-init)
