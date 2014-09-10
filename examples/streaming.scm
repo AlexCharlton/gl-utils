@@ -102,7 +102,7 @@ END
                                                       (program) "position"))
                                         (color . ,(gl:get-attrib-location
                                                    (program) "color"))))
-  (mesh-make-vao rect #:stream)
+  (mesh-make-vao! rect #:stream)
   (let loop ()
     (cycle-colors)
     (glfw:swap-buffers (glfw:window))

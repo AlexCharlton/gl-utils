@@ -85,7 +85,7 @@ END
                                                       (program) "position"))
                                         (color . ,(gl:get-attrib-location
                                                    (program) "color"))))
-  (mesh-make-vao rect)
+  (mesh-make-vao! rect)
   (let loop ()
     (glfw:swap-buffers (glfw:window))
     (gl:clear (bitwise-ior gl:+color-buffer-bit+ gl:+depth-buffer-bit+))

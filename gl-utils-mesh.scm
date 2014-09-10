@@ -1,4 +1,5 @@
 (module gl-utils-mesh (make-mesh
+                       mesh?
                        mesh-vertex-attributes
                        mesh-index-type
                        mesh-vertex-data
@@ -19,7 +20,7 @@
                        vertex-attribute-number
                        vertex-attribute-normalized
                        vertex-attribute-location
-                       mesh-make-vao
+                       mesh-make-vao!
                        with-mesh
                        copy-mesh!
                        copy-mesh
@@ -311,9 +312,9 @@
     vec))
 
 ;;;; Mesh operations
-(define (mesh-make-vao mesh #!optional (usage #:static))
+(define (mesh-make-vao! mesh #!optional (usage #:static))
   (when (mesh-vao mesh)
-    (error 'mesh-make-vao "Mesh already has vao" mesh))
+    (error 'mesh-make-vao! "Mesh already has vao" mesh))
   (let* ((vao (gl:gen-vertex-array))
          (stride (mesh-stride mesh))
          (vertex-buffer (gl:gen-buffer))

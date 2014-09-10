@@ -100,7 +100,7 @@ END
                                                       (program) "position"))
                                         (color . ,(gl:get-attrib-location
                                                    (program) "color"))))
-  (mesh-make-vao rect #:dynamic)
+  (mesh-make-vao! rect #:dynamic)
   (let loop ()
     (cycle-color)
     (glfw:swap-buffers (glfw:window))
