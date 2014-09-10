@@ -98,10 +98,9 @@
 
 (define (vertex-length attributes init)
   (let* ((lengths (map (lambda (i)
-                         (if* (get-vertex-attribute (car i) attributes)
-                              (quotient (length (cdr i))
-                                        (vertex-attribute-number it))
-                              (error 'make-mesh "No vertex attributes to match initial-element" (car i))))
+                         (quotient (length (cdr i))
+                                   (vertex-attribute-number
+                                    (get-vertex-attribute (car i) attributes))))
                        init))
          (length (car lengths)))
     (for-each (lambda (l)
