@@ -152,7 +152,7 @@
     result))
 
 (define (bytevector-copy! to at from
-                          #!optional (start 0 ) (end (bytevector-length from)))
+                          #!optional (start 0) (end (bytevector-length from)))
   (when (or (< start 0) (>= start end) (> end (bytevector-length from)))
     (error 'bytevector-copy "Bad from range" (list start end)))
   (when (or (< at 0) (> at (bytevector-length to)))
