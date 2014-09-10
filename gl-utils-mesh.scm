@@ -22,8 +22,8 @@
                        vertex-attribute-location
                        mesh-make-vao!
                        with-mesh
-                       copy-mesh!
-                       copy-mesh
+                       mesh-copy!
+                       mesh-copy
                        mesh-append
                        mesh-transform!
                        mesh-transform-append
@@ -363,15 +363,15 @@
       (mesh-index-data-set! mesh #f)
       (mesh-vertex-data-set! mesh #f)
       (gl:delete-buffer vertex-buffer)
-      (gl:delete-buffer index-buffer))))
+      (when index-data (gl:delete-buffer index-buffer)))))
 
-(define (copy-mesh! to at from
+(define (mesh-copy! to at from
                     #!optional (start 0) (end (mesh-n-vertices mesh)))
   (let ((stride (mesh-stride from)))
     (bytevector-copy! (mesh-vertex-data to) (* at (mesh-stride to))
                       (mesh-vertex-data from) (* start stride) (* end stride))))
 
-(define (copy-mesh mesh)
+(define (mesh-copy mesh)
   (make-mesh vertices: `(attributes: ,(map (lambda (a)
                                              (list (vertex-attribute-name a)
                                                    (vertex-attribute-type a)
@@ -516,9 +516,9 @@
 
 (define (usage->gl usage)
   (ecase usage
-    ((dynamic:) gl:+dynamic-draw+)
-    ((stream:) gl:+stream-draw+)
-    ((static:) gl:+static-draw+)
+    ((dynamic: dynamic-draw:) gl:+dynamic-draw+)
+    ((stream: stream-draw:) gl:+stream-draw+)
+    ((static: static-draw:) gl:+static-draw+)
     ((dynamic-read:) gl:+dynamic-read+)
     ((stream-read:) gl:+stream-read+)
     ((static-read:) gl:+static-read+)
