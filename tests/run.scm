@@ -24,4 +24,8 @@
   (bytevector-f32-set! a 1 32.8)
   (test 32.8 (bytevector-f32-ref a 1)))
 
+(let ((a #u8(1 2 3 4 5)))
+  (bytevector-f32-set! a 1 32)
+  (test 32.0 (bytevector-f32-ref a 1)))
+
 (test-exit)
