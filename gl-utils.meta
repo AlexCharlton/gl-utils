@@ -5,4 +5,5 @@
  (category graphics)
  (license "BSD")
  (depends z3 matchable miscmacros srfi-99 srfi-42 make opengl-glew gl-math)
+ (test-depends test)
  (foreign-depends "OpenGL"))
