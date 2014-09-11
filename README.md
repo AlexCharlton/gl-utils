@@ -180,9 +180,9 @@ Create a new mesh. `VERTICES` is a list of key value pairs that specifies the me
 
 `ATTRIBUTES` is a list in the form:
 
-    (NAME TYPE N [normalized: NORMALIZED] [location: LOCATION])
+    (NAME TYPE N [normalized: NORMALIZED])
 
-where `NAME` is the attribute name (as a symbol), `TYPE` is the type of the attribute as accepted by `type->gl`, `N` is the number of elements in the attribute, `NORMALIZED` is a boolean value indicating whether the attribute’s values should be normalized (defaulting to `#f`), and `LOCATION` is the shader attribute-location of the attribute (defaulting to -1 and settable by `mesh-attribute-locations-set!`).
+where `NAME` is the attribute name (as a symbol), `TYPE` is the type of the attribute as accepted by `type->gl`, `N` is the number of elements in the attribute, `NORMALIZED` is a boolean value indicating whether the attribute’s values should be normalized (defaulting to `#f`).
 
 `INITIAL-ELEMENTS` is either a bytevector or a list of `(NAME . VALUE)` pairs where name is the name of the attribute to set (as per the name given in `ATTRIBUTES`) and `VALUE` is the initial contents of that attribute. When a list is given and more than one attribute is given initial-elements, the `VALUE`s should represent the same number of vertices. Values associated with attributes that are `NORMALIZED` should be provided as float between `0.0` and `1.0` (for unsigned types) or `-1.0` and `1.0`, which are then normalized. If `INITIAL-ELEMENTS` is given as a bytevector, that bytevector is used as the entire mesh’s vertex data and `N-VERTICES` – the number of vertices – must be provided.
 
@@ -198,17 +198,13 @@ where `NAME` is the attribute name (as a symbol), `TYPE` is the type of the attr
 
 The type of record returned by `make-mesh`. `VERTEX-ATTRIBUTES` is a list of `vertex-attribute` records. `INDEX-TYPE` is the type given to the `indices:` argument of `make-mesh`. `VERTEX-DATA` and `INDEX-DATA` are the bytevectors representing the vertex and index data. `N-VERTICES` and `N-INDICES` are the number of vertices and indices present in the data. `VERTEX-BUFFER`, `INDEX-BUFFER` and `VAO` are the vertex buffers and VAO created by `mesh-make-vao!`. `STRIDE` is the number of bytes between the start of consecutive vertices. `MODE` is the value of the `mode:` argument provided to `make-mesh`. `USAGE` is the buffer usage that is set with `make-mesh-vao!`.
 
-    [record] (vertex-attribute name type number normalized location)
+    [record] (vertex-attribute name type number normalized)
 
 The type of record returned by `mesh-vertex-attributes`. Getters for all of the fields are provided.
 
-    [procedure] (mesh-attribute-locations-set! MESH LOCATIONS)
+    [procedure] (mesh-make-vao! MESH LOCATIONS [USAGE])
 
-Set the shader attribute locations of the attributes of `MESH`. `LOCATIONS` is a list of `(ATTRIBUTE-NAME . LOCATION)` pairs.
-
-    [procedure] (mesh-make-vao! MESH [USAGE])
-
-Create a vertex attribute object (VAO) for `MESH`. `USAGE` is the buffer usage hint keyword as accepted by `usage->gl`, defaulting to `#:static`. Vertex buffer objects (VBOs) are created for the vertex and index data. The VAO binds these buffers, and sets the vertex attribute pointers. If the usage is one of the static types, the vertex and index data of the mesh are deleted, as are the vertex and index buffers. Attribute locations should be set for the mesh with `mesh-attribute-locations-set!` before calling `mesh-make-vao!`. The VBOs and VAO created by `make-mesh-vao!` are managed and should not be deleted.
+Create a vertex attribute object (VAO) for `MESH`. `LOCATIONS` is a list of `(ATTRIBUTE-NAME . LOCATION)` pairs. `USAGE` is the buffer usage hint keyword as accepted by `usage->gl`, defaulting to `#:static`. Vertex buffer objects (VBOs) are created for the vertex and index data. The VAO binds these buffers, and sets the vertex attribute pointers of attributes for which locations have been given. If the usage is one of the static types, the vertex and index data of the mesh are deleted, as are the vertex and index buffers. The VBOs and VAO created by `make-mesh-vao!` are managed and should not be deleted.
 
     [procedure] (mesh-vertex-ref MESH ATTRIBUTE VERTEX)
 
@@ -405,11 +401,10 @@ END
   (set! *fragment* (make-shader gl:+fragment-shader+ *fragment*))
   (program (make-program (list *vertex* *fragment*)))
 
-  (mesh-attribute-locations-set! rect `((position . ,(gl:get-attrib-location
-                                                      (program) "position"))
-                                        (color . ,(gl:get-attrib-location
-                                                   (program) "color"))))
-  (mesh-make-vao! rect)
+  (mesh-make-vao! rect `((position . ,(gl:get-attrib-location
+                                       (program) "position"))
+                         (color . ,(gl:get-attrib-location
+                                    (program) "color"))))
   (let loop ()
     (glfw:swap-buffers (glfw:window))
     (gl:clear (bitwise-ior gl:+color-buffer-bit+ gl:+depth-buffer-bit+))
