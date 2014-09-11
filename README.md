@@ -129,45 +129,27 @@ Return the length in bytes of `BYTEVECTOR`.
 Returns true if `BYTEVECTOR` is a bytevector, false otherwise.
 
     [procedure] (bytevector-u8-set! BYTEVECTOR K UNSIGNED-BYTE)
-
     [procedure] (bytevector-s8-set! BYTEVECTOR K BYTE)
-
     [procedure] (bytevector-u16-set! BYTEVECTOR K UNSIGNED-SHORT)
-
     [procedure] (bytevector-s16-set! BYTEVECTOR K SHORT)
-
     [procedure] (bytevector-u32-set! BYTEVECTOR K UNSIGNED-INT)
-
     [procedure] (bytevector-s32-set! BYTEVECTOR K INT)
-
     [procedure] (bytevector-u64-set! BYTEVECTOR K UNSIGNED-LONG)
-
     [procedure] (bytevector-s64-set! BYTEVECTOR K LONG)
-
     [procedure] (bytevector-f32-set! BYTEVECTOR K FLOAT)
-
     [procedure] (bytevector-f64-set! BYTEVECTOR K DOUBLE)
 
 Sets the byte `K` of the given bytevector to be the value of the given fixnum or flonum. These functions are unsafe, so be sure `K` is a valid location in the bytevector.
 
     [procedure] (bytevector-u8-ref BYTEVECTOR K)
-
     [procedure] (bytevector-s8-ref BYTEVECTOR K)
-
     [procedure] (bytevector-u16-ref BYTEVECTOR K)
-
     [procedure] (bytevector-s16-ref BYTEVECTOR K)
-
     [procedure] (bytevector-u32-ref BYTEVECTOR K)
-
     [procedure] (bytevector-s32-ref BYTEVECTOR K)
-
     [procedure] (bytevector-u64-ref BYTEVECTOR K)
-
     [procedure] (bytevector-s64-ref BYTEVECTOR K)
-
     [procedure] (bytevector-f32-ref BYTEVECTOR K)
-
     [procedure] (bytevector-f64-ref BYTEVECTOR K)
 
 Returns the fixnum or flonum of the given size located at byte `K` of the given bytevector. These functions are unsafe, so be sure `K` is a valid location in the bytevector.
