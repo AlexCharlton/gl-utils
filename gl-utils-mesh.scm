@@ -12,7 +12,6 @@
                        mesh-mode
                        mesh-vao
                        mesh-usage
-                       mesh-attribute-locations-set!
                        mesh-vertex-ref
                        mesh-vertex-set!
                        vertex-attribute-name
@@ -236,14 +235,6 @@
 
 
 ;;;; Mesh accessors
-(define (mesh-attribute-locations-set! mesh locations)
-  (let ((attributes (mesh-vertex-attributes mesh)))
-    (let loop ((locations locations))
-      (unless (null? locations)
-        (let ((attribute (get-vertex-attribute (caar locations) attributes)))
-          (vertex-attribute-location-set! attribute (cdar locations)))
-        (loop (cdr locations))))))
-
 (define (with-mesh mesh thunk)
   (gl:bind-buffer gl:+array-buffer+ (mesh-vertex-buffer mesh))
   (thunk)
@@ -312,9 +303,18 @@
     vec))
 
 ;;;; Mesh operations
-(define (mesh-make-vao! mesh #!optional (usage #:static))
+(define (mesh-attribute-locations-set! mesh locations)
+  (let ((attributes (mesh-vertex-attributes mesh)))
+    (let loop ((locations locations))
+      (unless (null? locations)
+        (let ((attribute (get-vertex-attribute (caar locations) attributes)))
+          (vertex-attribute-location-set! attribute (cdar locations)))
+        (loop (cdr locations))))))
+
+(define (mesh-make-vao! mesh locations #!optional (usage #:static))
   (when (mesh-vao mesh)
     (error 'mesh-make-vao! "Mesh already has vao" mesh))
+  (mesh-attribute-locations-set! mesh locations)
   (let* ((vao (gl:gen-vertex-array))
          (stride (mesh-stride mesh))
          (vertex-buffer (gl:gen-buffer))
