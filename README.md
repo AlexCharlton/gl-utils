@@ -118,7 +118,7 @@ Returns a newly allocated bytevector containing its arguments.
 
 Return a newly-allocated bytevector of length `K`. If the optional fill `BYTE` is specified, it specifies the initial value for each slot in the bytevector.
 
-The optional arguments `NONGC` and `FINALIZE` define whether the vector should be allocated in a memory area not subject to garbage collection and whether the associated storage should be automatically freed (using finalization) when there are no references from Scheme variables and data. NONGC defaults to #t (the vector will be located in non-garbage-collected memory) and FINALIZE defaults to #t. Note that the FINALIZE argument is only used when NONGC is true.
+The optional arguments `NONGC` and `FINALIZE` define whether the vector should be allocated in a memory area not subject to garbage collection and whether the associated storage should be automatically freed (using finalization) when there are no references from Scheme variables and data. `NONGC` defaults to #t (the vector will be located in non-garbage-collected memory) and `FINALIZE` defaults to #t. Note that the `FINALIZE` argument is only used when `NONGC` is true.
 
     [procedure] (bytevector-length BYTEVECTOR)
 
@@ -192,7 +192,7 @@ Copies the elements of bytevector `FROM` between `START` and `END` to bytevector
 ### gl-utils-mesh
     [procedure] (make-mesh vertices: VERTICES [indices: INDICES] [mode: MODE])
 
-`VERTICES` is a list of key value pairs that specifies the mesh’s vertex data. It should be in the form:
+Create a new mesh. `VERTICES` is a list of key value pairs that specifies the mesh’s vertex data. It should be in the form:
 
     (attributes: ATTRIBUTES [initial-elements: INITIAL-ELEMENTS] [n-vertices: N-VERTICES])
 
@@ -200,9 +200,9 @@ Copies the elements of bytevector `FROM` between `START` and `END` to bytevector
 
     (NAME TYPE N [normalized: NORMALIZED] [location: LOCATION])
 
-where `NAME` is the attribute name (as a symbol), `TYPE` is the type of the attribute as accepted by `type->gl`, `N` is the number of elements in the attribute, `NORMALIZED` is a boolean value indicating whether the attribute’s values should be normalized (defaulting to `#f`), and `LOCATION` is the shader attribute-location of the attribute (defaulting to -1 and settable by `mesh-attribute-locations-set!`.
+where `NAME` is the attribute name (as a symbol), `TYPE` is the type of the attribute as accepted by `type->gl`, `N` is the number of elements in the attribute, `NORMALIZED` is a boolean value indicating whether the attribute’s values should be normalized (defaulting to `#f`), and `LOCATION` is the shader attribute-location of the attribute (defaulting to -1 and settable by `mesh-attribute-locations-set!`).
 
-`INITIAL-ELEMENTS` is either a bytevector or a list of `(NAME . VALUE)` pairs where name is the name of the attribute to set (as per the name given in `ATTRIBUTES`) and `VALUE` is the initial contents of that attribute. When a list is given and more than one attribute is given initial-elements, the `VALUE`s should represent the same number of vertices. Values associated with attributes that are NORMALIZED should be provided as floats, which are then normalized. If `INITIAL-ELEMENTS` is given as a bytevector, that bytevector is used as the entire mesh’s vertex data and `N-VERTICES` – the number of vertices – must be provided.
+`INITIAL-ELEMENTS` is either a bytevector or a list of `(NAME . VALUE)` pairs where name is the name of the attribute to set (as per the name given in `ATTRIBUTES`) and `VALUE` is the initial contents of that attribute. When a list is given and more than one attribute is given initial-elements, the `VALUE`s should represent the same number of vertices. Values associated with attributes that are `NORMALIZED` should be provided as float between `0.0` and `1.0` (for unsigned types) or `-1.0` and `1.0`, which are then normalized. If `INITIAL-ELEMENTS` is given as a bytevector, that bytevector is used as the entire mesh’s vertex data and `N-VERTICES` – the number of vertices – must be provided.
 
 `INDICES` is an optional list of key value pairs that specifies the mesh’s index data, if it exists. It should be in the form:
 
@@ -214,7 +214,7 @@ where `NAME` is the attribute name (as a symbol), `TYPE` is the type of the attr
 
     [record] (mesh VERTEX-ATTRIBUTES INDEX-TYPE VERTEX-DATA INDEX-DATA N-VERTICES N-INDICES VERTEX-BUFFER INDEX-BUFFER VAO STRIDE MODE USAGE)
 
-The type of record returned by make-mesh. `VERTEX-ATTRIBUTES` is a list of `vertex-attribute` records. `INDEX-TYPE` is the type given to the `indices:` argument of `make-mesh`. `VERTEX-DATA` and `INDEX-DATA` are the bytevectors representing the vertex and index data. `N-VERTICES` and `N-INDICES` are the number of vertices and indices present in the data. `VERTEX-BUFFER`, `INDEX-BUFFER` and `VAO` are the vertex buffers and VAO created by `mesh-make-vao!`. `STRIDE` is the number of bytes between the start of consecutive vertices. `MODE` is the value of the `mode:` argument provided to `make-mesh`. `USAGE` is the buffer usage that is set with `make-mesh-vao!`.
+The type of record returned by `make-mesh`. `VERTEX-ATTRIBUTES` is a list of `vertex-attribute` records. `INDEX-TYPE` is the type given to the `indices:` argument of `make-mesh`. `VERTEX-DATA` and `INDEX-DATA` are the bytevectors representing the vertex and index data. `N-VERTICES` and `N-INDICES` are the number of vertices and indices present in the data. `VERTEX-BUFFER`, `INDEX-BUFFER` and `VAO` are the vertex buffers and VAO created by `mesh-make-vao!`. `STRIDE` is the number of bytes between the start of consecutive vertices. `MODE` is the value of the `mode:` argument provided to `make-mesh`. `USAGE` is the buffer usage that is set with `make-mesh-vao!`.
 
     [record] (vertex-attribute name type number normalized location)
 
@@ -226,17 +226,17 @@ Set the shader attribute locations of the attributes of `MESH`. `LOCATIONS` is a
 
     [procedure] (mesh-make-vao! MESH [USAGE])
 
-Create a vertex attribute object (VAO) for `MESH`. `USAGE` is the buffer usage hint keyword as accepted by `usage->gl`, defaulting to `#:static`. Vertex buffer objects (VBOs) are created for the vertex and index data. The VAO binds these buffers, and sets the vertex attribute pointers. If the usage is one of the static types, the vertex and index data of the mesh are deleted, as are the vertex and index buffers. Attribute locations should be set for the mesh with `mesh-attribute-locations-set!` before calling `mesh-make-vao!`.
+Create a vertex attribute object (VAO) for `MESH`. `USAGE` is the buffer usage hint keyword as accepted by `usage->gl`, defaulting to `#:static`. Vertex buffer objects (VBOs) are created for the vertex and index data. The VAO binds these buffers, and sets the vertex attribute pointers. If the usage is one of the static types, the vertex and index data of the mesh are deleted, as are the vertex and index buffers. Attribute locations should be set for the mesh with `mesh-attribute-locations-set!` before calling `mesh-make-vao!`. The VBOs and VAO created by `make-mesh-vao!` are managed and should not be deleted.
 
     [procedure] (mesh-vertex-ref MESH ATTRIBUTE VERTEX)
 
-Return a vector containing the values of the attribute named ATTRIBUTE corresponding to the `VERTEX`th vertex of the `MESH`. The result will be a srfi-4 numeric vector, corresponding to the type of the given attribute.
+Return a vector containing the values of the attribute named `ATTRIBUTE` corresponding to the `VERTEX`th vertex of the `MESH`. The result will be a srfi-4 numeric vector, corresponding to the type of the given attribute.
 
     [procedure] (mesh-vertex-set! MESH ATTRIBUTE VERTEX VALUE)
 
 Set the `VERTEX`th vertex of the `MESH`’s attribute named `ATTRIBUTE` to the values provided by the srfi-4 numeric vector `VALUE`. `VALUE` must correspond to the type of the attribute, and should be the same length as the attribute. Using a `VALUE` that is too short is unsafe.
 
-If `mesh-make-vao!` has been called already, `mesh-vertex-set!` should be called inside a `with-mesh`. If `mesh-make-vao!` was called with a static usage, `mesh-vertex-set! will result in an error, since there is no longer any vertex data to set.
+If `mesh-make-vao!` has been called already, `mesh-vertex-set!` should be called inside a `with-mesh`. If `mesh-make-vao!` was called with a static usage, `mesh-vertex-set!` will result in an error, since there is no longer any vertex data to set.
 
     [procedure] (with-mesh MESH THUNK)
 
@@ -266,37 +266,40 @@ Creates a new mesh resulting by appending all the given meshes together, then tr
 
 Converts the keyword `USAGE` into a OpenGL usage enum value. Accepted usages (grouped by synonyms) are: 
 
-- dynamic: dynamic-draw:
-- stream: stream-draw:
-- static: static-draw:
-- dynamic-read:
-- stream-read:
-- static-read:
-- dynamic-copy:
-- stream-copy:
-- static-copy:
+- `dynamic:` `dynamic-draw:`
+- `stream:` `stream-draw:`
+- `static:` `static-draw:`
+- `dynamic-read:`
+- `stream-read:`
+- `static-read:`
+- `dynamic-copy:`
+- `stream-copy:`
+- `static-copy:`
+
+This line is here to prevent a Markdown parsing error :|
+
 
     [procedure] (mode->gl MODE)
 
 Converts the keyword `MODE` into a OpenGL mode enum value. Accepted modes are: 
 
-- points:
-- line-strip:
-- line-loop:
-- line-strip-adjacency:
-- lines-adjacency:
-- triangle-strip:
-- triangle-fan:
-- triangles:
-- triangle-strip-adjacency:
-- triangles-adjacency:
-- patches:
+- `points:`
+- `line-strip:`
+- `line-loop:`
+- `line-strip-adjacency:`
+- `lines-adjacency:`
+- `triangle-strip:`
+- `triangle-fan:`
+- `triangles:`
+- `triangle-strip-adjacency:`
+- `triangles-adjacency:`
+- `patches:`
 
 
 ### gl-utils-ply
     [procedure] (load-ply FILE BUFFER-SPEC)
 
-Loads a [PLY](http://paulbourke.net/dataformats/ply/) file. `FILE` is a path that may be pointing either to a gziped PLY file or a regular PLY file. `BUFFER-SPEC` is a list in the form `((NAME VARS) ...)` where `NAME` is the name of an element in the PLY file and `VARS` is either a list of property names or, in the case of a property list, a single name. Two values are returned: a list of u8vectors which correspond to the buffers named in `BUFFER-SPEC` and a list of the elements that are in the PLY file in the form of:
+Loads a [PLY](http://paulbourke.net/dataformats/ply/) file. `FILE` is a path that may be pointing either to a gziped PLY file or a regular PLY file. `BUFFER-SPEC` is a list in the form `((NAME VARS) ...)` where `NAME` is the name of an element in the PLY file and `VARS` is either a list of property names or, in the case of a property list, a single name. Two values are returned: a list of bytevectors which correspond to the buffers named in `BUFFER-SPEC` and a list of the elements that are in the PLY file in the form of:
 
     (element-name n-elements (property-name property-type))
 
@@ -316,7 +319,7 @@ Similar to load-ply, but returns a mesh. `FILE` is a PLY file (which may be gzip
 
 Again, for a PLY file that has element `vertex` with properties `float x`, `float y`, `float z`, `float confidence`, `uchar r`, `uchar g`, and `uchar b`, as well as a element `face` with a property list `uchar ushort vertex_index`, the following could be used:
 
-    (load-ply-vao "example.ply" vertex: `((position x y z) 
+    (load-ply-mesh "example.ply" vertex: `((position x y z) 
                                           (color r g b))
                                 face: vertex_index)
 
