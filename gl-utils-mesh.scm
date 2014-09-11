@@ -18,7 +18,6 @@
                        vertex-attribute-type
                        vertex-attribute-number
                        vertex-attribute-normalized
-                       vertex-attribute-location
                        mesh-make-vao!
                        with-mesh
                        mesh-copy!
@@ -31,7 +30,8 @@
 
 (import chicken scheme foreign)
 (use (prefix gl-utils-core gl:) (prefix opengl-glew gl:) gl-utils-bytevector
-     srfi-1 srfi-4 srfi-99 miscmacros matchable extras lolevel gl-math)
+     srfi-1 srfi-4 srfi-99 miscmacros matchable extras lolevel gl-math
+     data-structures)
 
 ;;;; Mesh record
 (define-record-type mesh
@@ -52,13 +52,13 @@
 
 (define-record-type vertex-attribute
   #t #t
-  name type number normalized (location) (offset))
+  name type number normalized (offset))
 
 (define-record-printer (vertex-attribute s out)
-  (fprintf out "#(vertex-attribute name: ~S type: ~S number: ~S normalized: ~S location: ~S offset: ~S)"
+  (fprintf out "#(vertex-attribute name: ~S type: ~S number: ~S normalized: ~S offset: ~S)"
     (vertex-attribute-name s) (vertex-attribute-type s)
     (vertex-attribute-number s) (vertex-attribute-normalized s)
-    (vertex-attribute-location s) (vertex-attribute-offset s)))
+    (vertex-attribute-offset s)))
 
 (define (delete-mesh m)
   (if* (mesh-vertex-buffer m)
@@ -120,9 +120,8 @@
           (make-vertex-attribute
            name type n
            (get-keyword normalized: keywords)
-           (get-keyword location: keywords (lambda () -1))
            0))
-         (attr (error 'make-mesh "Expected attribute attributes in the form (NAME TYPE NUMBER [NORMALIZED] [LOCATION])" attr)))
+         (attr (error 'make-mesh "Expected attribute attributes in the form (NAME TYPE NUMBER [NORMALIZED])" attr)))
        (get-keyword attributes: vertices
                     (lambda ()
                       (error 'make-mesh "vertices: keyword must contain a attributes: keyword" vertices)))))
@@ -303,18 +302,9 @@
     vec))
 
 ;;;; Mesh operations
-(define (mesh-attribute-locations-set! mesh locations)
-  (let ((attributes (mesh-vertex-attributes mesh)))
-    (let loop ((locations locations))
-      (unless (null? locations)
-        (let ((attribute (get-vertex-attribute (caar locations) attributes)))
-          (vertex-attribute-location-set! attribute (cdar locations)))
-        (loop (cdr locations))))))
-
 (define (mesh-make-vao! mesh locations #!optional (usage #:static))
   (when (mesh-vao mesh)
     (error 'mesh-make-vao! "Mesh already has vao" mesh))
-  (mesh-attribute-locations-set! mesh locations)
   (let* ((vao (gl:gen-vertex-array))
          (stride (mesh-stride mesh))
          (vertex-buffer (gl:gen-buffer))
@@ -337,15 +327,18 @@
     ;; start vertex-array
     (gl:bind-vertex-array vao)
     (for-each (lambda (attribute)
-                (gl:vertex-attrib-pointer
-                 (vertex-attribute-location attribute)
-                 (vertex-attribute-number attribute)
-                 (gl:type->gl (vertex-attribute-type attribute))
-                 (vertex-attribute-normalized attribute)
-                 stride
-                 (address->pointer (vertex-attribute-offset attribute)))
-                (gl:enable-vertex-attrib-array
-                 (vertex-attribute-location attribute)))
+                (let ((location (alist-ref (vertex-attribute-name attribute)
+                                           locations)))
+                  (when location
+                    (gl:vertex-attrib-pointer
+                    location
+                    (vertex-attribute-number attribute)
+                    (gl:type->gl (vertex-attribute-type attribute))
+                    (vertex-attribute-normalized attribute)
+                    stride
+                    (address->pointer (vertex-attribute-offset attribute)))
+                   (gl:enable-vertex-attrib-array
+                    location))))
               (mesh-vertex-attributes mesh))
     (when index-data
       (gl:bind-buffer gl:+element-array-buffer+ index-buffer))
