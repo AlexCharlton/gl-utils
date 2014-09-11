@@ -80,12 +80,10 @@ END
   (set! *vertex* (make-shader gl:+vertex-shader+ *vertex*))
   (set! *fragment* (make-shader gl:+fragment-shader+ *fragment*))
   (program (make-program (list *vertex* *fragment*)))
-
-  (mesh-attribute-locations-set! rect `((position . ,(gl:get-attrib-location
-                                                      (program) "position"))
-                                        (color . ,(gl:get-attrib-location
-                                                   (program) "color"))))
-  (mesh-make-vao! rect)
+  (mesh-make-vao! rect `((position . ,(gl:get-attrib-location
+                                       (program) "position"))
+                         (color . ,(gl:get-attrib-location
+                                    (program) "color"))))
   (let loop ()
     (glfw:swap-buffers (glfw:window))
     (gl:clear (bitwise-ior gl:+color-buffer-bit+ gl:+depth-buffer-bit+))

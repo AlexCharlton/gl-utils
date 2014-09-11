@@ -89,18 +89,15 @@ END
                        context-version-major: 3
                        context-version-minor: 3)
   (gl:init)
-
-  (print (gl:supported? "GL_ARB_framebuffer_object"))
-
   (set! *vertex* (make-shader gl:+vertex-shader+ *vertex*))
   (set! *fragment* (make-shader gl:+fragment-shader+ *fragment*))
   (program (make-program (list *vertex* *fragment*)))
-
-  (mesh-attribute-locations-set! rect `((position . ,(gl:get-attrib-location
-                                                      (program) "position"))
-                                        (color . ,(gl:get-attrib-location
-                                                   (program) "color"))))
-  (mesh-make-vao! rect #:dynamic)
+  (mesh-make-vao! rect
+                  `((position . ,(gl:get-attrib-location
+                                 (program) "position"))
+                   (color . ,(gl:get-attrib-location
+                              (program) "color")))
+                  #:dynamic)
   (let loop ()
     (cycle-color)
     (glfw:swap-buffers (glfw:window))
