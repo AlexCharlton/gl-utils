@@ -415,6 +415,11 @@ END
 ```
 
 ## Version history
+### Version 0.3.0
+11 September 2014
+
+* Merge `mesh-attribute-locations-set!` with `mesh-make-vao!`
+
 ### Version 0.2.0
 10 September 2014
 
