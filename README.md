@@ -77,6 +77,8 @@ Equivalent to binding the object, executing the body, then binding 0. E.g. `(bin
 
 Conveniently set the most common properties of the texture `ID`. `TYPE` is the texture type, defaulting to `+texture-2d+`. `MAG` and `MIN` are the texture magnify and minifying functions, which default to `+linear+`. `WRAP-S`, `WRAP-T`, and `WRAP-R` set the wrapping parameters which default to `+repeat+`. `WRAP` sets all three wrapping parameters to the same value.
 
+If `ID` is `#f`, no texture will be bound, and therefore properties of whatever texture is currently bound will be set.
+
     [procedure] (create-framebuffer WIDTH HEIGHT channels: CHANNELS type: TYPE)
 
 Create a framebuffer with a texture and depth renderbuffer attached. The texture and renderbuffer are given the dimensions `WITH` and `HEIGHT`. `CHANNELS` is the number of channels that the texture has: 1, 2, 3, or 4, corresponding to `+red+`, `+rg+`, `+rgb+, and `+rgba+ respectively, defaulting to 4. `TYPE` is the type of the texture data which defaults to `+unsigned-byte+`. Returns three values: The framebuffer, the texture, and the renderbuffer.
