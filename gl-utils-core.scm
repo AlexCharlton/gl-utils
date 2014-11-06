@@ -34,8 +34,10 @@
 #>
 #include <stdlib.h>
 #include <stdio.h>
-#ifdef __APPLE__
+#if defined (__APPLE__)
 #include <OpenGL/gl.h>
+#elif defined (GLES)
+#include <GLES3/gl3.h>
 #else
 #include <GL/gl.h>
 #endif
@@ -57,7 +59,9 @@ static void showInfoLog(GLuint object){
     ((int: int32: integer: integer32: uint: uint32: unsigned-int: unsigned-int32:
 	   unsigned-integer: unsigned-integer32: float: float32:)
      4)
-    ((double: float64:) 8)))
+    ((double: float64:) (cond-expand
+                          ((not gles) 8)
+                          (else (error 'type->bytes "Doubles not a valid ES type"))))))
 
 (define (type->gl type)
   (ecase type
@@ -70,7 +74,9 @@ static void showInfoLog(GLuint object){
 	    unsigned-integer: unsigned-integer32:)
      gl:+unsigned-int+)
     ((float: float32:) gl:+float+)
-    ((double: float64:) gl:+double+)))
+    ((double: float64:) (cond-expand
+                          ((not gles) gl:+double+)
+                          (else (error 'type->bytes "Doubles not a valid ES type"))))))
 
 (define make-shader
   (foreign-lambda* unsigned-int ((unsigned-int type) (c-string source))
@@ -120,22 +126,36 @@ END
       C_return(program);")
    program))
 
-(define check-error
-  (foreign-lambda* void ()
+(cond-expand
+  (gles (define check-error
+          (foreign-lambda* void ()
 #<<END
-    switch (glGetError()){
-    case 0: break;
-    case GL_INVALID_ENUM: fprintf(stderr, "GL error: Invalid enum\n"); break;
-    case GL_INVALID_VALUE: fprintf(stderr, "GL error: Invalid value\n"); break;
-    case GL_INVALID_OPERATION: fprintf(stderr, "GL error: Invalid operation\n"); break;
-    case GL_STACK_OVERFLOW: fprintf(stderr, "GL error: Stack overflow\n"); break;
-    case GL_STACK_UNDERFLOW: fprintf(stderr, "GL error: Stack underflow\n"); break;
-    case GL_OUT_OF_MEMORY: fprintf(stderr, "GL error: Out of memory\n"); break;
-    case GL_TABLE_TOO_LARGE: fprintf(stderr, "GL error: Table too large\n"); break;
-    default: fprintf(stderr, "GL error: Unknown\n");
-    }
+switch (glGetError()){
+case 0: break ;
+case GL_INVALID_ENUM: fprintf(stderr, "GL error: Invalid enum\n") ; break;
+case GL_INVALID_VALUE: fprintf(stderr, "GL error: Invalid value\n") ; break;
+case GL_INVALID_OPERATION: fprintf(stderr, "GL error: Invalid operation\n") ; break;
+case GL_OUT_OF_MEMORY: fprintf(stderr, "GL error: Out of memory\n") ; break;
+default: fprintf(stderr, "GL error: Unknown\n") ;
+}
 END
-))
+)))
+  (else (define check-error
+     (foreign-lambda* void ()
+#<<END
+switch (glGetError()){
+case 0: break ;
+case GL_INVALID_ENUM: fprintf(stderr, "GL error: Invalid enum\n") ; break;
+case GL_INVALID_VALUE: fprintf(stderr, "GL error: Invalid value\n") ; break;
+case GL_INVALID_OPERATION: fprintf(stderr, "GL error: Invalid operation\n") ; break;
+case GL_STACK_OVERFLOW: fprintf(stderr, "GL error: Stack overflow\n") ; break;
+case GL_STACK_UNDERFLOW: fprintf(stderr, "GL error: Stack underflow\n") ; break;
+case GL_OUT_OF_MEMORY: fprintf(stderr, "GL error: Out of memory\n") ; break;
+case GL_TABLE_TOO_LARGE: fprintf(stderr, "GL error: Table too large\n") ; break;
+default: fprintf(stderr, "GL error: Unknown\n") ;
+}
+END
+))))
 
 (define (gen-buffer)
   (let ((vec (make-u32vector 1)))

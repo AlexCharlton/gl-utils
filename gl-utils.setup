@@ -2,6 +2,11 @@
 
 (use make)
 
+(define gl-client
+  (cond-expand
+    ((or arm gles) "-Dgles -C -DGLES")
+    (else "")))
+
 (define gl-compile-options
   (cond-expand
     (macosx "-FOpenGL")
@@ -11,39 +16,40 @@
   (cond-expand
     (macosx "-framework OpenGL")
     (windows "-lopengl32")
+    ((or arm gles) "-lGLESv2")
     (else "-lGL")))
 
-(define compile-options "-O3 -d2") ;todo lower debug 
+(define compile-options "-O2 -d0")
 
 (make (("gl-utils.so" ("gl-utils.scm" "gl-utils-core.import.so" "gl-utils-srfi-4.so"
                        "gl-utils-ply.import.so" "gl-utils-mesh.import.so"
                        "gl-utils-bytevector.import.so")
-        (compile -s ,compile-options gl-utils.scm -J))
+        (compile -s ,compile-options gl-utils.scm ,gl-client -J))
        ("gl-utils.import.so" ("gl-utils.so")
         (compile -s ,compile-options gl-utils.import.scm))
        ("gl-utils-core.so" ("gl-utils-core.scm")
-        (compile -s ,compile-options gl-utils-core.scm
-                 ,gl-compile-options ,gl-link-options -lGL -J))
+        (compile -s ,compile-options gl-utils-core.scm ,gl-client
+                 ,gl-compile-options ,gl-link-options -J))
        ("gl-utils-core.import.so" ("gl-utils-core.so")
         (compile -s ,compile-options gl-utils-core.import.scm))
        ("gl-utils-srfi-4.so" ("gl-utils-srfi-4.scm")
-        (compile -s ,compile-options gl-utils-srfi-4.scm -J))
+        (compile -s ,compile-options gl-utils-srfi-4.scm ,gl-client -J))
        ("gl-utils-srfi-4.import.so" ("gl-utils-srfi-4.so")
         (compile -s ,compile-options gl-utils-srfi-4.import.scm))
        ("gl-utils-ply.so" ("gl-utils-ply.scm" "gl-utils-core.import.so"
                            "gl-utils-bytevector.import.so" "gl-utils-mesh.import.so")
-        (compile -s ,compile-options gl-utils-ply.scm -J))
+        (compile -s ,compile-options gl-utils-ply.scm ,gl-client -J))
        ("gl-utils-ply.import.so" ("gl-utils-ply.so")
         (compile -s ,compile-options gl-utils-ply.import.scm))
        ("gl-utils-bytevector.so" ("gl-utils-bytevector.scm"
                                   "gl-utils-srfi-4.import.so")
-        (compile -s ,compile-options gl-utils-bytevector.scm -J))
+        (compile -s ,compile-options gl-utils-bytevector.scm ,gl-client -J))
        ("gl-utils-bytevector.import.so" ("gl-utils-bytevector.so")
         (compile -s ,compile-options gl-utils-bytevector.import.scm))
        ("gl-utils-mesh.so" ("gl-utils-mesh.scm"
                             "gl-utils-core.import.so"
                             "gl-utils-bytevector.import.so")
-        (compile -s ,compile-options gl-utils-mesh.scm -J))
+        (compile -s ,compile-options gl-utils-mesh.scm ,gl-client -J))
        ("gl-utils-mesh.import.so" ("gl-utils-mesh.so")
         (compile -s ,compile-options gl-utils-mesh.import.scm)))
   '("gl-utils.so" "gl-utils.import.so"

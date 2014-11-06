@@ -131,6 +131,9 @@
     (fold (lambda (a n)
             (let ((size (* (gl:type->bytes (vertex-attribute-type a))
                            (vertex-attribute-number a))))
+              (cond-expand
+                (gles (set! size (align-to-word size)))
+                (else))
               (vertex-attribute-offset-set! a offset)
               (inc! offset size)
               (+ size n)))
@@ -519,18 +522,27 @@
     ((stream-copy:) gl:+stream-copy+)
     ((static-copy:) gl:+static-copy+)))
 
-(define (mode->gl mode)
-  (ecase mode
-    ((points:) gl:+points+)
-    ((line-strip:) gl:+line-strip+)
-    ((line-loop:) gl:+line-loop+)
-    ((line-strip-adjacency:) gl:+line-strip-adjacency+)
-    ((lines-adjacency:) gl:+lines-adjacency+)
-    ((triangle-strip:) gl:+triangle-strip+)
-    ((triangle-fan:) gl:+triangle-fan+)
-    ((triangles:) gl:+triangles+)
-    ((triangle-strip-adjacency:) gl:+triangle-strip-adjacency+)
-    ((triangles-adjacency:) gl:+triangles-adjacency+)
-    ((patches:) gl:+patches+)))
+(cond-expand
+  (gles (define (mode->gl mode)
+          (ecase mode
+            ((points:) gl:+points+)
+            ((line-strip:) gl:+line-strip+)
+            ((line-loop:) gl:+line-loop+)
+            ((triangle-strip:) gl:+triangle-strip+)
+            ((triangle-fan:) gl:+triangle-fan+)
+            ((triangles:) gl:+triangles+))))
+  (else (define (mode->gl mode)
+          (ecase mode
+            ((points:) gl:+points+)
+            ((line-strip:) gl:+line-strip+)
+            ((line-loop:) gl:+line-loop+)
+            ((line-strip-adjacency:) gl:+line-strip-adjacency+)
+            ((lines-adjacency:) gl:+lines-adjacency+)
+            ((triangle-strip:) gl:+triangle-strip+)
+            ((triangle-fan:) gl:+triangle-fan+)
+            ((triangles:) gl:+triangles+)
+            ((triangle-strip-adjacency:) gl:+triangle-strip-adjacency+)
+            ((triangles-adjacency:) gl:+triangles-adjacency+)
+            ((patches:) gl:+patches+)))))
 
 ) ; end gl-utils-mesh
