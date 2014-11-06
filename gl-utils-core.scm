@@ -299,16 +299,19 @@ END
                                 wrap
                                 (wrap-s gl:+repeat+) (wrap-t gl:+repeat+)
                                 (wrap-r gl:+repeat+))
-  (with-texture type id
-    (gl:tex-parameteri type gl:+texture-mag-filter+ mag)
-    (gl:tex-parameteri type gl:+texture-min-filter+ min)
-    (if wrap
-        (begin (gl:tex-parameteri type gl:+texture-wrap-s+ wrap)
-               (gl:tex-parameteri type gl:+texture-wrap-t+ wrap)
-               (gl:tex-parameteri type gl:+texture-wrap-r+ wrap))
-        (begin (gl:tex-parameteri type gl:+texture-wrap-s+ wrap-s)
-               (gl:tex-parameteri type gl:+texture-wrap-t+ wrap-t)
-               (gl:tex-parameteri type gl:+texture-wrap-r+ wrap-r)))))
+  (unless id
+    (gl:bind-texture type id))
+  (gl:tex-parameteri type gl:+texture-mag-filter+ mag)
+  (gl:tex-parameteri type gl:+texture-min-filter+ min)
+  (if wrap
+      (begin (gl:tex-parameteri type gl:+texture-wrap-s+ wrap)
+             (gl:tex-parameteri type gl:+texture-wrap-t+ wrap)
+             (gl:tex-parameteri type gl:+texture-wrap-r+ wrap))
+      (begin (gl:tex-parameteri type gl:+texture-wrap-s+ wrap-s)
+             (gl:tex-parameteri type gl:+texture-wrap-t+ wrap-t)
+             (gl:tex-parameteri type gl:+texture-wrap-r+ wrap-r)))
+  (unless id
+    (gl:bind-texture type 0)))
 
 (define (create-framebuffer width height #!key (channels 4) (type gl:+unsigned-byte+))
   (let ((tex (gen-texture))
