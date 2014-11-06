@@ -8,6 +8,8 @@ Provides a higher level interface to OpenGL. The following modules are included:
 - gl-utils-ply: [PLY](http://paulbourke.net/dataformats/ply/) file loading
 - gl-utils-srfi-4: OpenGL-safe numeric vectors
 
+gl-utils works with OpenGL ES. Just define `gles` when compiling. gl-utils will automatically compile with ES support on ARM hardware.
+
 ## Installation
 This repository is a [Chicken Scheme](http://call-cc.org/) egg.
 
@@ -108,6 +110,7 @@ Converts the keyword `TYPE` into a OpenGL type enum value. Accepted types (group
 - `float:` `float32:`
 - `double:` `float64:`
 
+Double is not, however, a valid type when using GL ES.
 
 ### gl-utils-bytevector
 r7rs style bytevectors with unsafe accessors. As in gl-utils-srfi4, bytevectors are created in non-garbage-collected memory. They will still be freed when no longer used.
@@ -266,15 +269,16 @@ Converts the keyword `MODE` into a OpenGL mode enum value. Accepted modes are:
 - `points:`
 - `line-strip:`
 - `line-loop:`
-- `line-strip-adjacency:`
-- `lines-adjacency:`
+- `line-strip-adjacency:`**
+- `lines-adjacency:`**
 - `triangle-strip:`
 - `triangle-fan:`
 - `triangles:`
-- `triangle-strip-adjacency:`
-- `triangles-adjacency:`
-- `patches:`
+- `triangle-strip-adjacency:`**
+- `triangles-adjacency:`**
+- `patches:`**
 
+** Not available in GL ES
 
 ### gl-utils-ply
     [procedure] (load-ply FILE BUFFER-SPEC)
