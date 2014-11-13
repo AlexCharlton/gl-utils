@@ -90,7 +90,7 @@ static void showInfoLog(GLuint object){
     if (!shaderOk) {
        fprintf(stderr, "Failed to compile shader:\n\n");
        int i = 0, line = 2;
-       fprintf(stderr, "   1|  ", line);
+       fprintf(stderr, "   1|  ");
        while (source[i]){
          fputc(source[i], stderr);
          if(source[i] == '\n'){
