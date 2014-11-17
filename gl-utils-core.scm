@@ -21,9 +21,15 @@
                        delete-transform-feedback
                        gen-vertex-array
                        delete-vertex-array
-                       with-texture
                        set-texture-properties
+                       with-buffer
                        with-framebuffer
+                       with-program-pipeline
+                       with-renderbuffer
+                       with-sampler
+                       with-texture
+                       with-transform-feedback
+                       with-vertex-array
                        create-framebuffer
                        ->pointer
                        size)
