@@ -295,7 +295,7 @@ END
 
 (define-syntax with-vertex-array
   (syntax-rules ()
-    ((with-texture array body body-rest ...)
+    ((with-vertex-array array body body-rest ...)
      (begin (gl:bind-vertex-array array)
             body body-rest ...
             (gl:bind-vertex-array 0)))))
