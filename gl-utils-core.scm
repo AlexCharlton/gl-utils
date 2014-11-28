@@ -42,6 +42,10 @@
 #include <stdio.h>
 #if defined (__APPLE__)
 #include <OpenGL/gl.h>
+#elif defined (_WIN32)
+#include <GL/glew.h>
+#include <GL/glext.h>
+#include <GL/gl.h>
 #elif defined (GLES)
 #include <GLES3/gl3.h>
 #else
