@@ -80,7 +80,7 @@
         (begin
           (mesh-index-data-set! mesh #f)
           (mesh-index-type-set! mesh #f)
-          (mesh-n-indices-set! mesh 0)))
+          (mesh-n-indices-set! mesh (mesh-n-vertices mesh))))
     (mesh-vertex-buffer-set! mesh #f)
     (mesh-index-buffer-set! mesh #f)
     (mesh-vao-set! mesh #f)
