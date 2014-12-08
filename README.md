@@ -195,7 +195,7 @@ where `NAME` is the attribute name (as a symbol), `TYPE` is the type of the attr
 
     (type: TYPE [initial-elements: INITIAL-ELEMENTS] [n-indices: N-INDICES])
 
-`TYPE` is a type keyword (as accepted by `type->gl`) that must be a valid type for an element array buffer (i.e. an unsigned fixnum). `INITIAL-ELEMENTS` is either a bytevector or a list of values. If `INITIAL-ELEMENTS` is given as a bytevector,  `N-INDICES` – the number of indices – must be provided, otherwise `N-INDICES` is ignored. When no `INDICES` list is provided, the number of indices (as returned by `mesh-n-indices` is set to the number of vertices.
+`TYPE` is a type keyword (as accepted by `type->gl`) that must be a valid type for an element array buffer (i.e. an unsigned fixnum). `INITIAL-ELEMENTS` is either a bytevector or a list of values. If `INITIAL-ELEMENTS` is given as a bytevector,  `N-INDICES` – the number of indices – must be provided, otherwise `N-INDICES` is ignored. When no `INDICES` list is provided, the number of indices (as returned by `mesh-n-indices`) is set to the number of vertices.
 
 `MODE` is the keyword (as accepted by `mode->gl`) that defines what the mesh is supposed to represent. Defaults to `#:triangles`.
 
