@@ -421,6 +421,12 @@ END
 ```
 
 ## Version history
+### Version 0.4.0
+8 December 2014
+
+* Add Windows, OS X, GL ES support
+* Bug fixes
+
 ### Version 0.3.0
 11 September 2014
 

@@ -67,4 +67,4 @@
     "gl-utils-ply.so" "gl-utils-ply.import.so"
     "gl-utils-bytevector.so" "gl-utils-bytevector.import.so"
     "gl-utils-mesh.so" "gl-utils-mesh.import.so")
- '((version "0.3.5")))
+ '((version "0.4.0")))
