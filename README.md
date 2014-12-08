@@ -8,7 +8,7 @@ Provides a higher level interface to OpenGL. The following modules are included:
 - gl-utils-ply: [PLY](http://paulbourke.net/dataformats/ply/) file loading
 - gl-utils-srfi-4: OpenGL-safe numeric vectors
 
-gl-utils works with OpenGL ES. Just define `gles` when compiling. gl-utils will automatically compile with ES support on ARM hardware.
+gl-utils is known to work on Linux, Mac OS X, Windows, and with OpenGL ES. gl-utils will automatically compile with ES support on ARM hardware, or when `gles` is defined during compilation (e.g. `chicken-install -D gles`).
 
 ## Installation
 This repository is a [Chicken Scheme](http://call-cc.org/) egg.
@@ -189,13 +189,13 @@ Create a new mesh. `VERTICES` is a list of key value pairs that specifies the me
 
 where `NAME` is the attribute name (as a symbol), `TYPE` is the type of the attribute as accepted by `type->gl`, `N` is the number of elements in the attribute, `NORMALIZED` is a boolean value indicating whether the attribute’s values should be normalized (defaulting to `#f`).
 
-`INITIAL-ELEMENTS` is either a bytevector or a list of `(NAME . VALUE)` pairs where name is the name of the attribute to set (as per the name given in `ATTRIBUTES`) and `VALUE` is the initial contents of that attribute. When a list is given and more than one attribute is given initial-elements, the `VALUE`s should represent the same number of vertices. Values associated with attributes that are `NORMALIZED` should be provided as float between `0.0` and `1.0` (for unsigned types) or `-1.0` and `1.0`, which are then normalized. If `INITIAL-ELEMENTS` is given as a bytevector, that bytevector is used as the entire mesh’s vertex data and `N-VERTICES` – the number of vertices – must be provided.
+`INITIAL-ELEMENTS` is either a bytevector or a list of `(NAME . VALUE)` pairs where name is the name of the attribute to set (as per the name given in `ATTRIBUTES`) and `VALUE` is the initial contents of that attribute. When a list is given and more than one attribute is given initial-elements, the `VALUE`s should represent the same number of vertices. Values associated with attributes that are `NORMALIZED` should be provided as float between `0.0` and `1.0` (for unsigned types) or `-1.0` and `1.0`, which are then normalized. If `INITIAL-ELEMENTS` is given as a bytevector, that bytevector is used as the entire mesh’s vertex data and `N-VERTICES` – the number of vertices – must be provided, otherwise `N-VERTICES` is ignored.
 
 `INDICES` is an optional list of key value pairs that specifies the mesh’s index data, if it exists. It should be in the form:
 
     (type: TYPE [initial-elements: INITIAL-ELEMENTS] [n-indices: N-INDICES])
 
-`TYPE` is a type keyword (as accepted by `type->gl`) that must be a valid type for an element array buffer (i.e. an unsigned fixnum). `INITIAL-ELEMENTS` is either a bytevector or a list of values. If `INITIAL-ELEMENTS` is given as a bytevector,  `N-INDICES` – the number of indices – must be provided.
+`TYPE` is a type keyword (as accepted by `type->gl`) that must be a valid type for an element array buffer (i.e. an unsigned fixnum). `INITIAL-ELEMENTS` is either a bytevector or a list of values. If `INITIAL-ELEMENTS` is given as a bytevector,  `N-INDICES` – the number of indices – must be provided, otherwise `N-INDICES` is ignored. When no `INDICES` list is provided, the number of indices (as returned by `mesh-n-indices` is set to the number of vertices.
 
 `MODE` is the keyword (as accepted by `mode->gl`) that defines what the mesh is supposed to represent. Defaults to `#:triangles`.
 
