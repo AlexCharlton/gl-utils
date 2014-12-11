@@ -526,6 +526,7 @@
   (gles (define (mode->gl mode)
           (ecase mode
             ((points:) gl:+points+)
+            ((lines:) gl:+lines+)
             ((line-strip:) gl:+line-strip+)
             ((line-loop:) gl:+line-loop+)
             ((triangle-strip:) gl:+triangle-strip+)
@@ -534,6 +535,7 @@
   (else (define (mode->gl mode)
           (ecase mode
             ((points:) gl:+points+)
+            ((lines:) gl:+lines+)
             ((line-strip:) gl:+line-strip+)
             ((line-loop:) gl:+line-loop+)
             ((line-strip-adjacency:) gl:+line-strip-adjacency+)
