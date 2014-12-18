@@ -267,6 +267,7 @@ This line is here to prevent a Markdown parsing error :|
 Converts the keyword `MODE` into a OpenGL mode enum value. Accepted modes are: 
 
 - `points:`
+- `lines:`
 - `line-strip:`
 - `line-loop:`
 - `line-strip-adjacency:`**
