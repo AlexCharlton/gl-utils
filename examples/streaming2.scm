@@ -83,9 +83,7 @@ END
                     (color . (,n  0  0
                                0 ,n  0
                                0  0 ,n
-                              ,n  0 ,n)))
-                  '(0 1 2
-                    0 2 3))))
+                              ,n  0 ,n))))))
 
 (glfw:with-window (640 480 "Example" resizable: #f
                        context-version-major: 3
