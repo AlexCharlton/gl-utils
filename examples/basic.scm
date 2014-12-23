@@ -1,3 +1,5 @@
+;; This example illustrates drawing a basic mesh
+
 (import chicken scheme)
 (use (prefix glfw3 glfw:) (prefix opengl-glew gl:) gl-math gl-utils)
 

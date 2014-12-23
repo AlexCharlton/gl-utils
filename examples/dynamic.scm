@@ -1,3 +1,5 @@
+;; This example illustrates dynamic mesh data using mesh-vertex-set!
+
 (import chicken scheme)
 (use (prefix glfw3 glfw:) (prefix opengl-glew gl:) gl-math gl-utils)
 
