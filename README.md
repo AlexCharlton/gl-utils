@@ -426,6 +426,11 @@ END
 ```
 
 ## Version history
+### Version 0.5.0
+23 December 2014
+
+* Add `mesh-update!`
+
 ### Version 0.4.0
 8 December 2014
 
