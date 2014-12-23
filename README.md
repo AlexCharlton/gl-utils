@@ -211,6 +211,10 @@ The type of record returned by `mesh-vertex-attributes`. Getters for all of the 
 
 Create a vertex attribute object (VAO) for `MESH`. `LOCATIONS` is a list of `(ATTRIBUTE-NAME . LOCATION)` pairs. `USAGE` is the buffer usage hint keyword as accepted by `usage->gl`, defaulting to `#:static`. Vertex buffer objects (VBOs) are created for the vertex and index data. The VAO binds these buffers, and sets the vertex attribute pointers of attributes for which locations have been given. If the usage is one of the static types, the vertex and index data of the mesh are deleted, as are the vertex and index buffers. The VBOs and VAO created by `make-mesh-vao!` are managed and should not be deleted.
 
+    [procedure] (mesh-update! MESH VERTICES [INDICES])
+
+Update the entirety of the vertex data and optionally the index data of the `MESH`. This can be used in order to reuse the memory and vertex buffers of a mesh. `VERTICES` should be the same sort of list of `(NAME . VALUE)` attribute pairs that is accepted as the `initial-elements:` argument to `make-mesh`’s `vertices:` (though not a bytevector). The data in `VERTICES` should match the attributes of the original vector. Similarly, `INDICES` should be the same kind of list of elements that is accepted to `make-mesh`’s `indices`’s `initial-elements:`. The data in both `VERTICES` and `INDICES` must fit within the vertex and index bytevectors of the `MESH`. This can be called before or after `mesh-make-vao!`. Do not call inside a `with-mesh`.
+
     [procedure] (mesh-vertex-ref MESH ATTRIBUTE VERTEX)
 
 Return a vector containing the values of the attribute named `ATTRIBUTE` corresponding to the `VERTEX`th vertex of the `MESH`. The result will be a srfi-4 numeric vector, corresponding to the type of the given attribute.
