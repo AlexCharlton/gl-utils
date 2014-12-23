@@ -19,6 +19,7 @@
                        vertex-attribute-number
                        vertex-attribute-normalized
                        mesh-make-vao!
+                       mesh-update!
                        with-mesh
                        mesh-copy!
                        mesh-copy
@@ -105,7 +106,7 @@
          (length (car lengths)))
     (for-each (lambda (l)
                 (unless (= l length)
-                  (error 'make-mesh "Vertex initial elements do not all have the same number of vertices")))
+                  (error 'make-mesh "Vertex elements do not all have the same number of vertices")))
               (cdr lengths))
     length))
 
@@ -145,39 +146,42 @@
                  uint: uint32: unsigned-int: unsigned-int32:
                  unsigned-integer: unsigned-integer32:)))
 
-(define (set-initial-vertices attributes stride inits vertex-vector)
-  (let loop ((inits inits))
-    (unless (null? inits)
-      (let* ((init (car inits))
-             (attribute (get-vertex-attribute (car init) attributes))
-             (set (type->setter (vertex-attribute-type attribute)))
-             (offset (vertex-attribute-offset attribute))
-             (size (gl:type->bytes (vertex-attribute-type attribute)))
-             (number (vertex-attribute-number attribute))
-             (type (vertex-attribute-type attribute))
-             (de-normalize (if (and (vertex-attribute-normalized attribute)
-                                  (not (member type
-                                             '(float: float32: double: float64:))))
-                               (if (unsigned? type)
-                                   (lambda (x)
-                                     (inexact->exact
-                                      (round (* (max -1 (min 1 x))
-                                                (sub1 (expt 2 (* size 8)))))))
-                                   (lambda (x)
-                                     (- (inexact->exact
-                                         (round (* (add1 (max -1 (min 1 x)))
-                                                   0.5
-                                                   (sub1 (expt 2 (* size 8))))))
-                                        (expt 2 (sub1 (* size 8))))))
-                            (lambda (x) x))))
-        (do ((i 0 (add1 i))
-             (init (cdr init) (cdr init)))
-            ((null? init))
-          (set vertex-vector (+ (* (quotient i number) stride)
-                                (* (remainder i number) size)
-                                offset)
-               (de-normalize (car init)))))
-      (loop (cdr inits)))))
+(define (set-vertices mesh vertices)
+  (let ((attributes (mesh-vertex-attributes mesh))
+        (stride (mesh-stride mesh))
+        (vertex-vector (mesh-vertex-data mesh)))
+    (let loop ((inits vertices))
+      (unless (null? inits)
+        (let* ((init (car inits))
+               (attribute (get-vertex-attribute (car init) attributes))
+               (set (type->setter (vertex-attribute-type attribute)))
+               (offset (vertex-attribute-offset attribute))
+               (size (gl:type->bytes (vertex-attribute-type attribute)))
+               (number (vertex-attribute-number attribute))
+               (type (vertex-attribute-type attribute))
+               (de-normalize (if (and (vertex-attribute-normalized attribute)
+                                      (not (member type
+                                                   '(float: float32: double: float64:))))
+                                 (if (unsigned? type)
+                                     (lambda (x)
+                                       (inexact->exact
+                                        (round (* (max -1 (min 1 x))
+                                                  (sub1 (expt 2 (* size 8)))))))
+                                     (lambda (x)
+                                       (- (inexact->exact
+                                           (round (* (add1 (max -1 (min 1 x)))
+                                                     0.5
+                                                     (sub1 (expt 2 (* size 8))))))
+                                          (expt 2 (sub1 (* size 8))))))
+                                 (lambda (x) x))))
+          (do ((i 0 (add1 i))
+               (init (cdr init) (cdr init)))
+              ((null? init))
+            (set vertex-vector (+ (* (quotient i number) stride)
+                                  (* (remainder i number) size)
+                                  offset)
+                 (de-normalize (car init)))))
+        (loop (cdr inits))))))
 
 (define (make-mesh-vertices mesh vertices)
   (let* ((vertex-init (get-keyword initial-elements: vertices))
@@ -198,14 +202,16 @@
                (mesh-vertex-data-set!
                 mesh (make-bytevector (* (mesh-n-vertices mesh) stride)))
                (when vertex-init
-                 (set-initial-vertices attributes stride vertex-init
-                                       (mesh-vertex-data mesh)))))))
+                 (set-vertices mesh vertex-init))))))
 
 ;;; Index initialization
-(define (set-initial-indices index-type stride init index-vector)
-  (let ((set (type->setter index-type)))
+(define (set-indices mesh indices)
+  (let* ((index-type (mesh-index-type mesh))
+         (stride (gl:type->bytes index-type))
+         (index-vector (mesh-index-data mesh))
+         (set (type->setter index-type)))
     (do ((i 0 (add1 i))
-         (init init (cdr init)))
+         (init indices (cdr init)))
         ((null? init))
       (set index-vector (* i stride) (car init)))))
 
@@ -232,8 +238,7 @@
                (mesh-index-data-set!
                 mesh (make-bytevector (* (mesh-n-indices mesh) stride)))
                (when index-init
-                 (set-initial-indices index-type stride index-init
-                                      (mesh-index-data mesh)))))))
+                 (set-indices mesh index-init))))))
 
 
 ;;;; Mesh accessors
@@ -303,6 +308,38 @@
        "memcpy(to, (&((char *)from)[start]), length);")
      (gl:->pointer vec) (mesh-vertex-data mesh) (+ (* stride vertex) offset) length)
     vec))
+
+(define (mesh-update! mesh vertices indices)
+  (let ((usage (usage->gl (mesh-usage mesh)))
+        (stride (mesh-stride mesh))
+        (index-stride (gl:type->bytes (mesh-index-type mesh)))
+        (vertex-data (mesh-vertex-data mesh))
+        (index-data (mesh-index-data mesh))
+        (n-vertices (vertex-length (mesh-vertex-attributes mesh) vertices))
+        (n-indices (length indices)))
+    (when (> n-vertices (/ (bytevector-length vertex-data)
+                           stride))
+      (error 'mesh-update! "Cannot update mesh with more vertices than will fit in its array:" vertices))
+    (when (> n-indices (/ (bytevector-length index-data)
+                           index-stride))
+      (error 'mesh-update! "Cannot update mesh with more indices than will fit in its array:" indices))
+    (mesh-n-vertices-set! mesh n-vertices)
+    (mesh-n-indices-set! mesh n-indices)
+    (set-vertices mesh vertices)
+    (set-indices mesh indices)
+    (gl:bind-buffer gl:+array-buffer+ (mesh-vertex-buffer mesh))
+    (gl:bind-buffer gl:+element-array-buffer+ (mesh-index-buffer mesh))
+    (gl:buffer-data gl:+array-buffer+
+                    (* stride n-vertices)
+                    (bytevector->pointer vertex-data)
+                    usage)
+    (gl:buffer-data gl:+element-array-buffer+
+                    (* index-stride n-indices)
+                    (bytevector->pointer index-data)
+                    usage)
+    (gl:bind-buffer gl:+array-buffer+ 0)
+    (gl:bind-buffer gl:+element-array-buffer+ 0))
+  mesh)
 
 ;;;; Mesh operations
 (define (mesh-make-vao! mesh locations #!optional (usage #:static))
