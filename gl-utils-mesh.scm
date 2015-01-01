@@ -470,11 +470,6 @@
                  (get-vertex-attribute position-name
                                        (mesh-vertex-attributes mesh))))
         (stride (mesh-stride mesh)))
-    (print `(m*vector-array! ,transform
-                             (pointer+ (bytevector->pointer (mesh-vertex-data mesh))
-                                       ,(+ offset (* start stride)))
-                             stride: ,stride
-                             length: ,(- end start)))
     (m*vector-array! transform
                      (pointer+ (bytevector->pointer (mesh-vertex-data mesh))
                                (+ offset (* start stride)))
