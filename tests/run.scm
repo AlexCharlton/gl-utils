@@ -1,4 +1,4 @@
-(use test gl-utils-bytevector gl-utils-srfi-4)
+(use test gl-utils-bytevector srfi-4)
 
 (test #u8(1 2 3 4)
       (bytevector-append #u8(1 2) #u8(3 4)))

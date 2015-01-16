@@ -1,7 +1,7 @@
 (module gl-utils-bytevector *
 
 (import chicken scheme foreign)
-(use gl-utils-srfi-4 srfi-1)
+(use srfi-4 srfi-1)
 
 ;; Setting
 (define bytevector-u8-set!
@@ -109,7 +109,9 @@
 
 ;; Constructors
 (define bytevector u8vector)
-(define make-bytevector make-u8vector)
+
+(define (make-bytevector length #!optional init (nongc? #t) (finalize? #t))
+  (make-u8vector length init nongc? finalize?))
 
 ;; Length 
 (define bytevector-length u8vector-length)

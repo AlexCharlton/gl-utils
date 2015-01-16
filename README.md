@@ -113,11 +113,11 @@ Converts the keyword `TYPE` into a OpenGL type enum value. Accepted types (group
 Double is not, however, a valid type when using GL ES.
 
 ### gl-utils-bytevector
-r7rs style bytevectors with unsafe accessors. As in gl-utils-srfi4, bytevectors are created in non-garbage-collected memory. They will still be freed when no longer used.
+r7rs style bytevectors with unsafe accessors.
 
     [procedure] (bytevector BYTE ...)
 
-Returns a newly allocated bytevector containing its arguments.
+Returns a newly allocated bytevector containing its arguments. The resulting bytevector *will* be created in garbage-collected memory.
 
     [procedure] (make-bytevector K [BYTE] [NONGC] [FINALIZE])
 
@@ -213,7 +213,7 @@ Create a vertex attribute object (VAO) for `MESH`. `LOCATIONS` is a list of `(AT
 
     [procedure] (mesh-update! MESH VERTICES [INDICES])
 
-Update the entirety of the vertex data and optionally the index data of the `MESH`. This can be used in order to reuse the memory and vertex buffers of a mesh. `VERTICES` should be the same sort of list of `(NAME . VALUE)` attribute pairs that is accepted as the `initial-elements:` argument to `make-mesh`’s `vertices:` (though not a bytevector). The data in `VERTICES` should match the attributes of the original vector. Similarly, `INDICES` should be the same kind of list of elements that is accepted to `make-mesh`’s `indices`’s `initial-elements:`. The data in both `VERTICES` and `INDICES` must fit within the vertex and index bytevectors of the `MESH`. This can be called before or after `mesh-make-vao!`. Do not call inside a `with-mesh`.
+Update the entirety of the vertex data and optionally the index data of the `MESH`. This can be used in order to reuse the memory and vertex buffers of a mesh. `VERTICES` should be the same sort of list of `(NAME . VALUE)` attribute pairs that is accepted as the `initial-elements:` argument to `make-mesh`’s `vertices:` (though not a bytevector). The data in `VERTICES` should match the attributes of the original vector. Similarly, `INDICES` should be the same kind of list of elements that is accepted to `make-mesh`’s `indices`’s `initial-elements:`. The data in both `VERTICES` and `INDICES` must fit within the vertex and index bytevectors of the `MESH`. This can be called before or after `mesh-make-vao!`. Do not call inside `with-mesh`.
 
     [procedure] (mesh-vertex-ref MESH ATTRIBUTE VERTEX)
 
@@ -315,8 +315,10 @@ Again, for a PLY file that has element `vertex` with properties `float x`, `floa
 This would create a mesh with vertex attributes `(position #:float 3)` and `(color #:unsigned-byte 3 normalized: #t)` and the `#:unsigned-short` indices given by `vertex_index`.
 
 
-### gl-utils-srfi4
-gl-utils-srfi4 reexports a version of [srfi-4](http://api.call-cc.org/doc/srfi-4) that gives preference to vectors being created in non-garbage collected memory. This is useful for use with OpenGL, since it is often desirable to pass vectors to OpenGL that will remain in one place. All srfi-4 functions not mentioned below are reexported without changes.
+### gl-utils-srfi-4
+**This module has been deprecated. With gl-utils-mesh and gl-utils-bytevector, this functionality is better served by directly using srfi-4. This module may still be accessed by explicitly using gl-utils-srfi-4 for the time-being, but it will be removed in the future.**
+
+gl-utils-srfi-4 reexports a version of [srfi-4](http://api.call-cc.org/doc/srfi-4) that gives preference to vectors being created in non-garbage collected memory. This is useful for use with OpenGL, since it is often desirable to pass vectors to OpenGL that will remain in one place. All srfi-4 functions not mentioned below are reexported without changes.
 
 The `NNNvector` and `list->NNNvector` constructors have been modified so that they return vectors in non-garbage collected memory. They will still be freed when no longer used.
 
@@ -426,6 +428,11 @@ END
 ```
 
 ## Version history
+### Version 0.6.0
+16 January 2014
+
+* Deprecate gl-utils-srfi-4
+
 ### Version 0.5.0
 23 December 2014
 
