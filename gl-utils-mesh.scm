@@ -18,6 +18,7 @@
                        vertex-attribute-type
                        vertex-attribute-number
                        vertex-attribute-normalized
+                       vertex-attribute-offset
                        mesh-make-vao!
                        mesh-update!
                        with-mesh
