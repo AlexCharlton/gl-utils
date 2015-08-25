@@ -320,6 +320,8 @@
         (n-indices (and indices (length indices)))
         (vertex-buffer (mesh-vertex-buffer mesh))
         (index-buffer (mesh-index-buffer mesh)))
+    (unless vertex-data
+      (error 'mesh-update! "Trying to update a mesh with no data. Usage should be dynamic or stream"))
     (when (> n-vertices (/ (bytevector-length vertex-data)
                            stride))
       (error 'mesh-update! "Cannot update mesh with more vertices than will fit in its array:" vertices))
