@@ -87,6 +87,7 @@
     (mesh-index-buffer-set! mesh #f)
     (mesh-vao-set! mesh #f)
     (mesh-dirty-set! mesh #f)
+    (mesh-usage-set! mesh #f)
     (mesh-mode-set! mesh mode)
     mesh))
 
@@ -311,7 +312,7 @@
     vec))
 
 (define (mesh-update! mesh vertices #!optional indices)
-  (let ((usage (usage->gl (mesh-usage mesh)))
+  (let ((usage (and (mesh-usage mesh) (usage->gl (mesh-usage mesh))))
         (stride (mesh-stride mesh))
         (index-stride (gl:type->bytes (mesh-index-type mesh)))
         (vertex-data (mesh-vertex-data mesh))
