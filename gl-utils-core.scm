@@ -346,39 +346,8 @@ END
 
     (values fbo tex rend)))
 
-
-;; Low-level vector/blob conveniance
-(define-syntax XXX->pointer
-  (ir-macro-transformer
-   (lambda (e r c)
-     (let* ((type (strip-syntax (cadr e)))
-            (name (string->symbol (string-append (symbol->string type) "->pointer"))))
-       `(define ,name
-          (foreign-lambda* c-pointer ((,type v))
-            "C_return(v);"))))))
-
-(XXX->pointer blob)
-(XXX->pointer u8vector)
-(XXX->pointer s8vector)
-(XXX->pointer u16vector)
-(XXX->pointer s16vector)
-(XXX->pointer u32vector)
-(XXX->pointer s32vector)
-(XXX->pointer f32vector)
-(XXX->pointer f64vector)
-
 (define (->pointer v)
-  (cond
-   ((blob? v) (blob->pointer v))
-   ((u8vector? v) (u8vector->pointer v))
-   ((s8vector? v) (s8vector->pointer v))
-   ((u16vector? v) (u16vector->pointer v))
-   ((s16vector? v) (s16vector->pointer v))
-   ((u32vector? v) (u32vector->pointer v))
-   ((s32vector? v) (s32vector->pointer v))
-   ((f32vector? v) (f32vector->pointer v))
-   ((f64vector? v) (f64vector->pointer v))
-   (else (error '->pointer "Not a blob or vector" v))))
+  (make-locative v))
 
 (define (size v)
   (cond
