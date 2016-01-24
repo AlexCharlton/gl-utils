@@ -137,11 +137,16 @@ END
       C_return(program);")
    program))
 
-; Usage: (check-gl (gl:do stuff))
+; Usage:
+; (check-gl
+;   (gl:do-that ...)
+;   (gl:do-this ...))
 (define-syntax check-gl
     (syntax-rules ()
-        ((check-gl body)
-            (begin body (check-error)))))
+        ((_ body ... last)
+            (begin
+                body ...
+                (let ((ret last)) (check-error) ret)))))
 
 (define (check-error)
     (let ((e (gl:get-error)))
@@ -156,8 +161,16 @@ END
         ((= e gl:+invalid-operation+) "GL error: invalid operation\n")
         ((= e gl:+invalid-framebuffer-operation+) "GL error: invalid framebuffer operation\n")
         ((= e gl:+out-of-memory+) "GL error: out of memory\n")
-        ;((= e gl:+context-lost+) "GL error: context lost\n") ; GL 4.5
-        (else (string-append "Unknown GL error: " (number->string e) "\n"))))
+        ;((= e gl:+context-lost+) "GL error: context lost\n") ; GL 4.5 or GLES 3.2
+        (else
+            (cond-expand
+                ((not gles)
+                    (cond
+                        ((= e gl:+stack-overflow+) "GL error: stack overflow\n")
+                        ((= e gl:+stack-underflow+) "GL error: stack underflow\n")
+                        (else (string-append "Unknown GL error: " (number->string e) "\n"))))
+                (else
+                    (string-append "Unknown GL error: " (number->string e) "\n"))))))
 
 (define (gen-buffer)
   (let ((vec (make-u32vector 1)))
