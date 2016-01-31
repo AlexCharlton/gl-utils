@@ -2,6 +2,7 @@
                        type->gl
                        make-shader
                        make-program
+                       check-gl
                        check-error
                        gen-buffer
                        delete-buffer
@@ -136,36 +137,40 @@ END
       C_return(program);")
    program))
 
-(cond-expand
-  (gles (define check-error
-          (foreign-lambda* void ()
-#<<END
-switch (glGetError()){
-case 0: break ;
-case GL_INVALID_ENUM: fprintf(stderr, "GL error: Invalid enum\n") ; break;
-case GL_INVALID_VALUE: fprintf(stderr, "GL error: Invalid value\n") ; break;
-case GL_INVALID_OPERATION: fprintf(stderr, "GL error: Invalid operation\n") ; break;
-case GL_OUT_OF_MEMORY: fprintf(stderr, "GL error: Out of memory\n") ; break;
-default: fprintf(stderr, "GL error: Unknown\n") ;
-}
-END
-)))
-  (else (define check-error
-     (foreign-lambda* void ()
-#<<END
-switch (glGetError()){
-case 0: break ;
-case GL_INVALID_ENUM: fprintf(stderr, "GL error: Invalid enum\n") ; break;
-case GL_INVALID_VALUE: fprintf(stderr, "GL error: Invalid value\n") ; break;
-case GL_INVALID_OPERATION: fprintf(stderr, "GL error: Invalid operation\n") ; break;
-case GL_STACK_OVERFLOW: fprintf(stderr, "GL error: Stack overflow\n") ; break;
-case GL_STACK_UNDERFLOW: fprintf(stderr, "GL error: Stack underflow\n") ; break;
-case GL_OUT_OF_MEMORY: fprintf(stderr, "GL error: Out of memory\n") ; break;
-case GL_TABLE_TOO_LARGE: fprintf(stderr, "GL error: Table too large\n") ; break;
-default: fprintf(stderr, "GL error: Unknown\n") ;
-}
-END
-))))
+; Usage:
+; (check-gl
+;   (gl:do-that ...)
+;   (gl:do-this ...))
+(define-syntax check-gl
+    (syntax-rules ()
+        ((_ body ... last)
+            (begin
+                body ...
+                (let ((ret last)) (check-error) ret)))))
+
+(define (check-error)
+    (let ((e (gl:get-error)))
+        (when (not (= e gl:+no-error+))
+            (display (gl-error->string e) (current-error-port)))))
+
+(define (gl-error->string e)
+    (cond
+        ((= e gl:+no-error+) "No GL error\n")
+        ((= e gl:+invalid-enum+) "GL error: invalid enum\n")
+        ((= e gl:+invalid-value+) "GL error: invalid value\n")
+        ((= e gl:+invalid-operation+) "GL error: invalid operation\n")
+        ((= e gl:+invalid-framebuffer-operation+) "GL error: invalid framebuffer operation\n")
+        ((= e gl:+out-of-memory+) "GL error: out of memory\n")
+        ;((= e gl:+context-lost+) "GL error: context lost\n") ; GL 4.5 or GLES 3.2
+        (else
+            (cond-expand
+                ((not gles)
+                    (cond
+                        ((= e gl:+stack-overflow+) "GL error: stack overflow\n")
+                        ((= e gl:+stack-underflow+) "GL error: stack underflow\n")
+                        (else (string-append "Unknown GL error: " (number->string e) "\n"))))
+                (else
+                    (string-append "Unknown GL error: " (number->string e) "\n"))))))
 
 (define (gen-buffer)
   (let ((vec (make-u32vector 1)))
