@@ -243,11 +243,11 @@ Creates a new mesh resulting from appending the vertices of the given meshes tog
 
     [procedure] (mesh-transform! POSITION-NAME MESH TRANSFORM)
 
-Destructively modifies the `POSITION-NAME` attribute of `MESH` by the [gl-math](http://wiki.call-cc.org/eggref/4/gl-math) matrix `TRANSFORM`. `POSITION-NAME` must be the name of a three element float attribute of `MESH`.
+Destructively modifies the `POSITION-NAME` attribute of `MESH` by the [gl-math](http://wiki.call-cc.org/eggref/4/gl-math) matrix `TRANSFORM`. `POSITION-NAME` must be the name of a three element float attribute of `MESH`. `POSITION-NAME` may be a list of multiple attributes.
 
     [procedure] (mesh-transform-append POSITION-NAME MESH-TRANSFORM-PAIR . MESH-TRANSFORM-PAIRS)
 
-Creates a new mesh resulting by appending all the given meshes together, then transforming the attribute named by `POSITION-NAME` by the given [gl-math](http://wiki.call-cc.org/eggref/4/gl-math) transform matrices. `MESH-TRANSFORM-PAIR` and `MESH-TRANSFORM-PAIRS` are `(MESH . TRANFORM)` pairs. `POSITION-NAME` must be the name of a three element float attribute of `MESH`. The attributes of all the meshes are assumed to be the same, otherwise bad things will probably happen. If only two arguments are passed to `mesh-transform-append` it is assumed that the second is a list of mesh/transform pairs.
+Creates a new mesh resulting by appending all the given meshes together, then transforming the attribute named by `POSITION-NAME` by the given [gl-math](http://wiki.call-cc.org/eggref/4/gl-math) transform matrices. `MESH-TRANSFORM-PAIR` and `MESH-TRANSFORM-PAIRS` are `(MESH . TRANFORM)` pairs. `POSITION-NAME` must be the name of a three element float attribute of `MESH`. `POSITION-NAME` may be a list of multiple attributes. The attributes of all the meshes are assumed to be the same, otherwise bad things will probably happen. If only two arguments are passed to `mesh-transform-append` it is assumed that the second is a list of mesh/transform pairs.
 
     [procedure] (usage->gl USAGE)
 
