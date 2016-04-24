@@ -470,15 +470,19 @@
   (when (or (negative? start) (> end (mesh-n-vertices mesh))
            (<= (- end start) 0))
     (error 'mesh-vertex-ref "Bad vertex range" start end))
-  (let ((offset (vertex-attribute-offset
-                 (get-vertex-attribute position-name
-                                       (mesh-vertex-attributes mesh))))
-        (stride (mesh-stride mesh)))
-    (m*vector-array! transform
-                     (pointer+ (bytevector->pointer (mesh-vertex-data mesh))
-                               (+ offset (* start stride)))
-                     stride: stride
-                     length: (- end start))))
+  (let ((stride (mesh-stride mesh)))
+    (for-each (lambda (position-name)
+                (let ((offset (vertex-attribute-offset
+                               (get-vertex-attribute position-name
+                                                     (mesh-vertex-attributes mesh)))))
+                  (m*vector-array! transform
+                                   (pointer+ (bytevector->pointer (mesh-vertex-data mesh))
+                                             (+ offset (* start stride)))
+                                   stride: stride
+                                   length: (- end start))))
+              (if (list? position-name)
+                  position-name
+                  (list position-name)))))
 
 (define (mesh-transform-append position-name pair . pairs)
   (let* ((pairs (if (null? pairs)
@@ -487,20 +491,24 @@
          (meshes (map car pairs))
          (transforms (map cdr pairs))
          (mesh (mesh-append meshes))
-         (offset (vertex-attribute-offset
-                  (get-vertex-attribute position-name
-                                        (mesh-vertex-attributes mesh))))
          (stride (mesh-stride mesh))
-         (vertex-data (mesh-vertex-data mesh)))
+         (vertex-data (bytevector->pointer (mesh-vertex-data mesh))))
     (let loop ((meshes meshes) (transforms transforms) (vertex-offset 0))
       (if (null? meshes)
           mesh
           (let ((n-vertices (mesh-n-vertices (car meshes))))
-            (m*vector-array! (car transforms)
-                             (pointer+ (bytevector->pointer vertex-data)
-                                       (+ offset (* vertex-offset stride)))
-                             stride: stride
-                             length: n-vertices)
+            (for-each (lambda (position-name)
+                        (let ((offset (vertex-attribute-offset
+                                       (get-vertex-attribute position-name
+                                                             (mesh-vertex-attributes mesh)))))
+                          (m*vector-array! (car transforms)
+                                           (pointer+ vertex-data
+                                                     (+ offset (* vertex-offset stride)))
+                                           stride: stride
+                                           length: n-vertices)))
+                      (if (list? position-name)
+                          position-name
+                          (list position-name)))
             (loop (cdr meshes) (cdr transforms)
                   (+ vertex-offset n-vertices)))))))
 
