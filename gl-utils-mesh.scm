@@ -161,21 +161,24 @@
                (size (gl:type->bytes (vertex-attribute-type attribute)))
                (number (vertex-attribute-number attribute))
                (type (vertex-attribute-type attribute))
-               (de-normalize (if (and (vertex-attribute-normalized attribute)
-                                      (not (member type
-                                                   '(float: float32: double: float64:))))
-                                 (if (unsigned? type)
-                                     (lambda (x)
-                                       (inexact->exact
-                                        (round (* (max -1 (min 1 x))
-                                                  (sub1 (expt 2 (* size 8)))))))
-                                     (lambda (x)
-                                       (- (inexact->exact
-                                           (round (* (add1 (max -1 (min 1 x)))
-                                                     0.5
-                                                     (sub1 (expt 2 (* size 8))))))
-                                          (expt 2 (sub1 (* size 8))))))
-                                 (lambda (x) x))))
+               (de-normalize
+                (if (and (vertex-attribute-normalized attribute)
+                         (not (member type
+                                      '(float: float32: double: float64:))))
+                    (if (unsigned? type)
+                        (lambda (x)
+                          (inexact->exact
+                           (fpfloor (* (fpmax -1.0 (min 1.0 (exact->inexact x)))
+                                       (sub1 (expt 2 (* size 8)))))))
+                        (lambda (x)
+                          (fx- (inexact->exact
+                                (fpfloor (* (fp+ (fp* (fpmax -1.0 (min 1.0 (exact->inexact x)))
+                                                      0.5)
+                                                 0.5)
+                                            (sub1 (expt 2 (* size 8))))))
+                               (fxshl 2 (fx- (fx* size 8)
+                                             1)))))
+                    (lambda (x) x))))
           (do ((i 0 (add1 i))
                (init (cdr init) (cdr init)))
               ((null? init))
