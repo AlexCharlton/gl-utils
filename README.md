@@ -237,17 +237,17 @@ Similar to `bytevector-copy!`, copies the vertices of mesh `FROM` between vertic
 
 Creates a fresh copy of `MESH`.
 
-    [procedure] (mesh-append MESH . MESHES)
+    [procedure] (mesh-append MESHES)
 
-Creates a new mesh resulting from appending the vertices of the given meshes together. The indices are also appended and modified so they point to the same vertices. The attributes of all the meshes are assumed to be the same, otherwise bad things will probably happen. If only one argument is passed to `mesh-append` it is assumed that it is a list of meshes.
+Creates a new mesh resulting from appending the vertices of the given meshes together. The indices are also appended and modified so they point to the same vertices. The attributes of all the meshes are assumed to be the same, otherwise bad things will probably happen.
 
-    [procedure] (mesh-transform! POSITION-NAME MESH TRANSFORM)
+    [procedure] (mesh-transform! MESH TRANSFORM [start: START] [end: END] [position-name: POSITION-NAME] [normal-name: NORMAL-NAME] [normal-transform: NORMAL-TRANSFORM])
 
-Destructively modifies the `POSITION-NAME` attribute of `MESH` by the [gl-math](http://wiki.call-cc.org/eggref/4/gl-math) matrix `TRANSFORM`. `POSITION-NAME` must be the name of a three element float attribute of `MESH`. `POSITION-NAME` may be a list of multiple attributes.
+Destructively modifies the `POSITION-NAME` attribute of `MESH` by the [gl-math](http://wiki.call-cc.org/eggref/4/gl-math) matrix `TRANSFORM`. `POSITION-NAME` defaults to `'position` and must be the name of a three element float attribute of `MESH`. If `NORMAL-NAME` (defaulting to `'normal`) is the name of an attribute in the given mesh, this attribute will be transformed by the inverse-transpose of the transform matrix. If `NORMAL-TRANSFORM` is present, it will be used instead of the `TRANSFORM` matrix for normal transformations.
 
-    [procedure] (mesh-transform-append POSITION-NAME MESH-TRANSFORM-PAIR . MESH-TRANSFORM-PAIRS)
+    [procedure] (mesh-transform-append MESH-TRANSFORM-PAIRS [position-name: POSITION-NAME] [normal-name: NORMAL-NAME])
 
-Creates a new mesh resulting by appending all the given meshes together, then transforming the attribute named by `POSITION-NAME` by the given [gl-math](http://wiki.call-cc.org/eggref/4/gl-math) transform matrices. `MESH-TRANSFORM-PAIR` and `MESH-TRANSFORM-PAIRS` are `(MESH . TRANFORM)` pairs. `POSITION-NAME` must be the name of a three element float attribute of `MESH`. `POSITION-NAME` may be a list of multiple attributes. The attributes of all the meshes are assumed to be the same, otherwise bad things will probably happen. If only two arguments are passed to `mesh-transform-append` it is assumed that the second is a list of mesh/transform pairs.
+Creates a new mesh resulting by appending all the given meshes together, then transforming the attribute named by `POSITION-NAME` by the given [gl-math](http://wiki.call-cc.org/eggref/4/gl-math) transform matrices. `MESH-TRANSFORM-PAIRS` are `(MESH TRANSFORM [NORMAL-TRANSFORM])` tuples. `POSITION-NAME` defaults to `'position` and must be the name of a three element float attribute of `MESH`. If `NORMAL-NAME` (defaulting to `'normal`) is the name of an attribute in the given mesh, this attribute will be transformed by the inverse-transpose of the transform matrices. If `NORMAL-TRANSFORM` is present, it will be used instead of the `TRANSFORM` matrix for normal transformations. The attributes of all the meshes are assumed to be the same, otherwise bad things will probably happen.
 
     [procedure] (usage->gl USAGE)
 

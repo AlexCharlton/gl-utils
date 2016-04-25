@@ -428,11 +428,8 @@
              indices: `(type: ,(mesh-index-type mesh)
                         initial-elements: ,(bytevector-copy (mesh-index-data mesh)))))
 
-(define (mesh-append mesh . meshes)
-  (let* ((meshes (if (null? meshes)
-                     mesh
-                     (cons mesh meshes)))
-         (mesh (car meshes))
+(define (mesh-append meshes)
+  (let* ((mesh (car meshes))
          (new (make-mesh vertices:
                          `(attributes: ,(map (lambda (a)
                                                (list (vertex-attribute-name a)
@@ -468,51 +465,76 @@
                   (+ index-index n-indices)
                   (+ vertex-offset n-vertices)))))))
 
-(define (mesh-transform! position-name mesh transform
-                         #!optional (start 0) (end (mesh-n-vertices mesh)))
+(define (mesh-transform! mesh transform
+                         #!optional  (start 0) (end (mesh-n-vertices mesh))
+                         (position-name 'position) (normal-name 'normal)
+                         normal-transform)
   (when (or (negative? start) (> end (mesh-n-vertices mesh))
            (<= (- end start) 0))
     (error 'mesh-vertex-ref "Bad vertex range" start end))
-  (let ((stride (mesh-stride mesh)))
-    (for-each (lambda (position-name)
-                (let ((offset (vertex-attribute-offset
-                               (get-vertex-attribute position-name
-                                                     (mesh-vertex-attributes mesh)))))
-                  (m*vector-array! transform
-                                   (pointer+ (bytevector->pointer (mesh-vertex-data mesh))
-                                             (+ offset (* start stride)))
-                                   stride: stride
-                                   length: (- end start))))
-              (if (list? position-name)
-                  position-name
-                  (list position-name)))))
+  (let* ((stride (mesh-stride mesh))
+         (attributes (mesh-vertex-attributes mesh))
+         (position-offset (vertex-attribute-offset
+                           (get-vertex-attribute position-name attributes)))
+         (normal-offset (if* (find (lambda (attribute)
+                                     (equal? normal-name
+                                             (vertex-attribute-name attribute)))
+                                   attributes)
+                             (vertex-attribute-offset it)
+                             #f))
+         (inverse-transpose (when normal-offset
+                              (transpose (inverse (or normal-transform transform))))))
+    (m*vector-array! transform
+                     (pointer+ (bytevector->pointer (mesh-vertex-data mesh))
+                               (+ position-offset (* start stride)))
+                     stride: stride
+                     length: (- end start))
+    (when normal-offset
+      (m*vector-array! inverse-transpose
+                       (pointer+ (bytevector->pointer (mesh-vertex-data mesh))
+                                 (+ normal-offset (* start stride)))
+                       stride: stride
+                       length: (- end start)))))
 
-(define (mesh-transform-append position-name pair . pairs)
-  (let* ((pairs (if (null? pairs)
-                    pair
-                    (cons pair pairs)))
-         (meshes (map car pairs))
-         (transforms (map cdr pairs))
+(define (mesh-transform-append pairs #!optional (position-name 'position)
+                               (normal-name 'normal))
+  (let* ((meshes (map first pairs))
+         (transforms (map second pairs))
+         (normal-transforms (if (> (length (car pairs)) 2)
+                                (map third pairs)
+                                #f))
          (mesh (mesh-append meshes))
+         (attributes (mesh-vertex-attributes mesh))
+         (position-offset (vertex-attribute-offset
+                           (get-vertex-attribute position-name attributes)))
+         (normal-offset (if* (find (lambda (attribute)
+                                     (equal? normal-name
+                                             (vertex-attribute-name attribute)))
+                                   attributes)
+                             (vertex-attribute-offset it)
+                             #f))
          (stride (mesh-stride mesh))
          (vertex-data (bytevector->pointer (mesh-vertex-data mesh))))
-    (let loop ((meshes meshes) (transforms transforms) (vertex-offset 0))
+    (let loop ((meshes meshes) (transforms transforms)
+               (normal-transforms normal-transforms) (vertex-offset 0))
       (if (null? meshes)
           mesh
-          (let ((n-vertices (mesh-n-vertices (car meshes))))
-            (for-each (lambda (position-name)
-                        (let ((offset (vertex-attribute-offset
-                                       (get-vertex-attribute position-name
-                                                             (mesh-vertex-attributes mesh)))))
-                          (m*vector-array! (car transforms)
-                                           (pointer+ vertex-data
-                                                     (+ offset (* vertex-offset stride)))
-                                           stride: stride
-                                           length: n-vertices)))
-                      (if (list? position-name)
-                          position-name
-                          (list position-name)))
+          (let ((n-vertices (mesh-n-vertices (car meshes)))
+                (offset (* vertex-offset stride)))
+            (m*vector-array! (car transforms)
+                             (pointer+ vertex-data
+                                       (+ position-offset offset))
+                             stride: stride
+                             length: n-vertices)
+            (when normal-offset
+              (m*vector-array! (transpose (inverse (car (or normal-transforms
+                                                            transforms))))
+                               (pointer+ vertex-data
+                                         (+ normal-offset offset))
+                               stride: stride
+                               length: n-vertices))
             (loop (cdr meshes) (cdr transforms)
+                  (and normal-transforms (cdr normal-transforms))
                   (+ vertex-offset n-vertices)))))))
 
 
