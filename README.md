@@ -428,6 +428,11 @@ END
 ```
 
 ## Version history
+### Version 0.7.0
+24 April 2016
+
+* Make `mesh-transform!` and `mesh-transform-append` aware of normals
+
 ### Version 0.6.0
 16 January 2014
 
