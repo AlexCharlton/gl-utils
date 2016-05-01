@@ -466,7 +466,7 @@
                   (+ vertex-offset n-vertices)))))))
 
 (define (mesh-transform! mesh transform
-                         #!optional  (start 0) (end (mesh-n-vertices mesh))
+                         #!key  (start 0) (end (mesh-n-vertices mesh))
                          (position-name 'position) (normal-name 'normal)
                          normal-transform)
   (when (or (negative? start) (> end (mesh-n-vertices mesh))
@@ -496,7 +496,7 @@
                        stride: stride
                        length: (- end start)))))
 
-(define (mesh-transform-append pairs #!optional (position-name 'position)
+(define (mesh-transform-append pairs #!key (position-name 'position)
                                (normal-name 'normal))
   (let* ((meshes (map first pairs))
          (transforms (map second pairs))
