@@ -252,8 +252,8 @@
   (thunk)
   (if* (mesh-dirty mesh)
        (let ((usage (mesh-usage mesh)))
-         (case usage
-           ((dynamic:)
+         (ecase usage
+           ((dynamic: dynamic-draw: dynamic-read: dynamic-copy:)
             (let ((lower (car it))
                   (upper (cdr it)))
               (gl:buffer-sub-data gl:+array-buffer+
@@ -262,7 +262,7 @@
                                   (pointer+ (bytevector->pointer
                                              (mesh-vertex-data mesh))
                                             lower))))
-           ((stream:)
+           ((stream: stream-draw: stream-copy: stream-read:)
             (gl:buffer-data gl:+array-buffer+
                             (* (mesh-stride mesh)
                                (mesh-n-vertices mesh))
@@ -401,14 +401,7 @@
     (when index-data
       (mesh-index-buffer-set! mesh index-buffer))
     (mesh-vao-set! mesh vao)
-    (set-finalizer! mesh delete-mesh)
-    (when (member usage '(static: static-read: static-copy:))
-      (mesh-index-buffer-set! mesh #f)
-      (mesh-vertex-buffer-set! mesh #f)
-      (mesh-index-data-set! mesh #f)
-      (mesh-vertex-data-set! mesh #f)
-      (gl:delete-buffer vertex-buffer)
-      (when index-data (gl:delete-buffer index-buffer)))))
+    (set-finalizer! mesh delete-mesh)))
 
 (define (mesh-copy! to at from
                     #!optional (start 0) (end (mesh-n-vertices mesh)))
